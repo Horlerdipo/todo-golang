@@ -60,6 +60,33 @@ func RespondWithError(w http.ResponseWriter, code int, message string, data inte
 	w.Write(marshalledData)
 }
 
+func RespondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}) {
+
+	w.Header().Add("Content-Type", "application/json")
+
+	if data == nil {
+		data = struct{}{}
+	}
+
+	content := JsonResponse{
+		message,
+		true,
+		data,
+	}
+
+	marshalledData, err := json.Marshal(content)
+
+	if err != nil {
+		log.Printf("Unable to marshal json %v", content)
+		w.Write([]byte(`{"message": "Internal Server Error", "success": false, "data": {}}`))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(code)
+	w.Write(marshalledData)
+}
+
 func JsonValidate[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 	var payload T
 

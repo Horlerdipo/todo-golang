@@ -20,14 +20,27 @@ func NewAuthHandler(authService *Service) *Handler {
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"message": "Login Successful"}`))
+	loginDto, err := utils.JsonValidate[dtos.LoginUserDTO](w, r)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	response, err := h.AuthService.Login(loginDto.Email, loginDto.Password)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	utils.RespondWithSuccess(w, http.StatusOK, "login successful", response)
+	return
 }
 
 func (h *Handler) registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	createUserDto, err := utils.JsonValidate[dtos.CreateUserDTO](w, r)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
