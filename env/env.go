@@ -37,7 +37,10 @@ func FetchInt(key string, fallback ...int) int {
 
 	resp, err := strconv.Atoi(response)
 	if err != nil {
-		return fallback[0]
+		if len(fallback) > 0 {
+			return fallback[0]
+		}
+		panic(fmt.Sprintf("environment variable %s is not an integer", key))
 	}
 	return resp
 }

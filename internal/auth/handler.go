@@ -57,9 +57,57 @@ func (h *Handler) registerHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (h *Handler) sendResetPasswordToken(w http.ResponseWriter, r *http.Request) {
+	//validate
+	type EmailStruct struct {
+		Email string `json:"email" validate:"required"`
+	}
+
+	email, err := utils.JsonValidate[EmailStruct](w, r)
+	if err != nil {
+		return
+	}
+
+	//call service
+	resp, errorRsp := h.AuthService.SendForgotPasswordToken(email.Email)
+	if errorRsp != nil && resp == false {
+		utils.RespondWithError(w, http.StatusBadRequest, errorRsp.Error(), nil)
+		return
+	}
+
+	//return response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	return
+}
+
+func (h *Handler) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	type ResetPassword struct {
+		NewPassword string `json:"new_password" validate:"required"`
+		ResetToken  string `json:"reset_token" validate:"required"`
+	}
+
+	resetPasswordStruct, err := utils.JsonValidate[ResetPassword](w, r)
+	if err != nil {
+		return
+	}
+
+	err = h.AuthService.ResetPassword(resetPasswordStruct.ResetToken, resetPasswordStruct.NewPassword)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+	return
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", h.loginHandler)
 		r.Post("/register", h.registerHandler)
+		r.Post("/password/forgot", h.sendResetPasswordToken)
+		r.Post("/password/reset", h.resetPasswordHandler)
 	})
 }

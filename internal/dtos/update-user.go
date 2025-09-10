@@ -1,16 +1,11 @@
-package users
+package dtos
 
-import (
-	"gorm.io/gorm"
-	"time"
-)
+import "time"
 
-type User struct {
-	gorm.Model
+type UpdateUserDTO struct {
 	FirstName           string     `json:"first_name"`
 	LastName            string     `json:"last_name"`
 	Email               string     `json:"email"`
-	Password            string     `json:"-"`
 	ResetToken          *string    `json:"reset_token"`
 	ResetTokenExpiresAt *time.Time `json:"reset_token_expires_at"`
 }
