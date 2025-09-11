@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/go-chi/chi/v5"
 	"github.com/horlerdipo/todo-golang/internal/auth"
 	"gorm.io/gorm"
 )
@@ -15,4 +16,8 @@ func NewAppContainer(db *gorm.DB) *Container {
 		db:            db,
 		AuthContainer: auth.NewContainer(db),
 	}
+}
+
+func (container *Container) RegisterRoutes(r *chi.Mux) {
+	container.AuthContainer.RegisterRoutes(r)
 }

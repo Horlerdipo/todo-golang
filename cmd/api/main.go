@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-
+	env.LoadEnv(".env")
 	db, err := gorm.Open(sqlite.Dialector{
 		DriverName: "sqlite", // <-- must match the imported driver
 		DSN:        "test.db",
@@ -41,7 +41,7 @@ func main() {
 	})
 
 	appContainer := app.NewAppContainer(db)
-	appContainer.AuthContainer.RegisterRoutes(r)
+	appContainer.RegisterRoutes(r)
 
 	port := env.FetchString("PORT", ":8000")
 	log.Println("🚀🚀🚀 Starting server on port " + port)

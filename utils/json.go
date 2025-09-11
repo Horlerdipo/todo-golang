@@ -12,10 +12,10 @@ import (
 	"strings"
 )
 
-type JsonResponse struct {
-	Message string      `json:"message"`
-	Status  bool        `json:"status"`
-	Data    interface{} `json:"data"`
+type JsonResponse[T any] struct {
+	Message string `json:"message"`
+	Status  bool   `json:"status"`
+	Data    T      `json:"data"`
 }
 
 func RespondWithJson(w http.ResponseWriter, code int, content interface{}) {
@@ -41,7 +41,7 @@ func RespondWithError(w http.ResponseWriter, code int, message string, data inte
 		data = struct{}{}
 	}
 
-	content := JsonResponse{
+	content := JsonResponse[interface{}]{
 		message,
 		false,
 		data,
@@ -68,7 +68,7 @@ func RespondWithSuccess(w http.ResponseWriter, code int, message string, data in
 		data = struct{}{}
 	}
 
-	content := JsonResponse{
+	content := JsonResponse[interface{}]{
 		message,
 		true,
 		data,

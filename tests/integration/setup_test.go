@@ -1,0 +1,165 @@
+package integration
+
+import (
+	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/horlerdipo/todo-golang/env"
+	"github.com/horlerdipo/todo-golang/internal/app"
+	"github.com/horlerdipo/todo-golang/internal/users"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"log"
+	_ "modernc.org/sqlite"
+	"net/http/httptest"
+	"os"
+	"testing"
+)
+
+type TestServer struct {
+	DB     *gorm.DB
+	Route  *chi.Mux
+	Server *httptest.Server
+}
+
+var TestServerInstance *TestServer
+var DBName string = "todo-golang-test.db"
+
+func TestMain(m *testing.M) {
+	env.LoadEnv(".env.testing")
+	TestServerInstance = setupGlobalServer()
+	code := m.Run()
+	tearDownGlobalServer(TestServerInstance)
+	os.Exit(code)
+}
+
+func setupGlobalServer() *TestServer {
+	db, err := gorm.Open(sqlite.Dialector{
+		DriverName: "sqlite", // <-- must match the imported driver
+		DSN:        DBName,
+	}, &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Migrate models
+	err = db.AutoMigrate(&users.User{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := chi.NewRouter()
+
+	appContainer := app.NewAppContainer(db)
+	appContainer.RegisterRoutes(r)
+
+	return &TestServer{
+		DB:     db,
+		Route:  r,
+		Server: httptest.NewServer(r),
+	}
+}
+
+func tearDownGlobalServer(ts *TestServer) {
+
+	// Close the test server
+	if ts.Server != nil {
+		ts.Server.Close()
+	}
+
+	if ts.DB != nil {
+		sqlDB, err := ts.DB.DB()
+		if err == nil {
+			_ = sqlDB.Close()
+		}
+	}
+
+	// Clean up test database file if db is sqlite
+	if ts.DB.Dialector.Name() == "sqlite" {
+		_ = os.Remove(DBName)
+	}
+
+}
+
+func ClearAllTables(t *testing.T, db *gorm.DB) {
+	// Get all table names
+	tables, err := getAllTableNames(db)
+	if err != nil {
+		t.Errorf("Failed to get table names: %v", err)
+		return
+	}
+
+	if len(tables) == 0 {
+		t.Log("No tables found to clean")
+		return
+	}
+
+	//t.Logf("Found %d tables to clean: %s", len(tables), strings.Join(tables, ", "))
+
+	// Disable foreign key constraints
+	if err := disableForeignKeys(db); err != nil {
+		t.Logf("Warning: Could not disable foreign keys: %v", err)
+	}
+
+	// Clear all tables
+	for _, table := range tables {
+		result := db.Exec(fmt.Sprintf("DELETE FROM %s", quoteTableName(db, table)))
+		if result.Error != nil {
+			t.Errorf("Failed to clear table %s: %v", table, result.Error)
+		}
+	}
+
+	// Re-enable foreign key constraints
+	if err := enableForeignKeys(db); err != nil {
+		t.Logf("Warning: Could not re-enable foreign keys: %v", err)
+	}
+}
+
+func getAllTableNames(db *gorm.DB) ([]string, error) {
+	var tables []string
+
+	switch db.Dialector.Name() {
+	case "sqlite":
+		query := "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+		err := db.Raw(query).Scan(&tables).Error
+		return tables, err
+
+	case "mysql":
+		query := "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'"
+		err := db.Raw(query).Scan(&tables).Error
+		return tables, err
+
+	default:
+		return nil, fmt.Errorf("unsupported database type: %s", db.Dialector.Name())
+	}
+}
+
+func disableForeignKeys(db *gorm.DB) error {
+	switch db.Dialector.Name() {
+	case "sqlite":
+		return db.Exec("PRAGMA foreign_keys = OFF").Error
+	case "mysql":
+		return db.Exec("SET FOREIGN_KEY_CHECKS = 0").Error
+	default:
+		return nil
+	}
+}
+
+func enableForeignKeys(db *gorm.DB) error {
+	switch db.Dialector.Name() {
+	case "sqlite":
+		return db.Exec("PRAGMA foreign_keys = ON").Error
+	case "mysql":
+		return db.Exec("SET FOREIGN_KEY_CHECKS = 1").Error
+	default:
+		return nil
+	}
+}
+
+func quoteTableName(db *gorm.DB, tableName string) string {
+	switch db.Dialector.Name() {
+	case "mysql":
+		return "`" + tableName + "`"
+	default:
+		return tableName
+	}
+}

@@ -8,10 +8,11 @@ import (
 	"strconv"
 )
 
-func init() {
-	err := godotenv.Load()
+func LoadEnv(environmentFileName string) {
+
+	err := godotenv.Load(environmentFileName)
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading file:", err)
 	}
 }
 
