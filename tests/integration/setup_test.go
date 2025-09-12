@@ -6,12 +6,14 @@ import (
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/app"
 	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"log"
 	_ "modernc.org/sqlite"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -162,4 +164,46 @@ func quoteTableName(db *gorm.DB, tableName string) string {
 	default:
 		return tableName
 	}
+}
+
+func seedUser[T any](t *testing.T, input T) *users.User {
+	t.Helper()
+
+	// Defaults
+	user := users.User{
+		FirstName:           "John",
+		LastName:            "Doe",
+		Email:               "testing@gmail.com",
+		Password:            "password",
+		ResetToken:          nil,
+		ResetTokenExpiresAt: nil,
+	}
+
+	inputValue := reflect.ValueOf(&input).Elem()
+	inputType := inputValue.Type()
+
+	if inputType.Kind() != reflect.Struct {
+		t.Fatalf("seedUser expects a struct, got %s", inputType.Kind())
+	}
+
+	defaultValue := reflect.ValueOf(&user).Elem()
+	defaultType := defaultValue.Type()
+
+	for i := 0; i < defaultType.NumField(); i++ {
+		field := defaultValue.Field(i)
+		fieldType := defaultType.Field(i)
+
+		inField := inputValue.FieldByName(fieldType.Name)
+		if inField.IsValid() && !inField.IsZero() && field.CanSet() {
+			field.Set(inField)
+		}
+	}
+
+	hashedPassword, _ := utils.HashPassword(user.Password)
+	user.Password = hashedPassword
+	result := TestServerInstance.DB.Create(&user)
+	if result.Error != nil {
+		t.Fatal(result.Error)
+	}
+	return &user
 }

@@ -56,7 +56,7 @@ func (service *Service) Login(email string, password string) (dtos.LoginUserResp
 	//check if password is correct
 	status := utils.CheckPasswordHash(password, user.Password)
 	if status == false {
-		return dtos.LoginUserResponseDto{}, errors.New("email or password is not valid")
+		return dtos.LoginUserResponseDto{}, errors.New("email or password is not correct")
 	}
 
 	//generate jwt token

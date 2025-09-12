@@ -81,7 +81,7 @@ func (repo *userRepository) UpdateUserPassword(userId uint, password string, res
 	}
 
 	if resetTokens {
-		result := repo.db.Model(&User{}).Where("id = ?", userId).Updates(map[string]interface{}{"password": hashedPassword, "reset_token": resetTokens, "reset_token_expires_at": nil})
+		result := repo.db.Model(&User{}).Where("id = ?", userId).Updates(map[string]interface{}{"password": hashedPassword, "reset_token": nil, "reset_token_expires_at": nil})
 		if result.Error != nil {
 			return result.Error
 		}

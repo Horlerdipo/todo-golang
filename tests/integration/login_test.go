@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
-	"github.com/horlerdipo/todo-golang/internal/users"
 	"github.com/horlerdipo/todo-golang/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,24 +17,9 @@ var loginRequest = dtos.LoginUserDTO{
 	Password: "password123",
 }
 
-func seedUser(t *testing.T) {
-	hashedPassword, _ := utils.HashPassword(loginRequest.Password)
-	user := users.User{
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     loginRequest.Email,
-		Password:  hashedPassword,
-	}
-
-	result := TestServerInstance.DB.Create(&user)
-	if result.Error != nil {
-		t.Fatal(result.Error)
-	}
-}
 func TestLogin_ValidationError(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	//seedUser(t)
 	request := map[string]string{}
 	jsonData, err := json.Marshal(request)
 	require.NoError(t, err, "Failed to marshal request")
@@ -53,7 +37,7 @@ func TestLogin_ValidationError(t *testing.T) {
 func TestLogin_EmailDoesNotExist(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t)
+	seedUser(t, struct{}{})
 
 	jsonData, err := json.Marshal(dtos.LoginUserDTO{
 		Email:    "johndoe@kkdkd.com",
@@ -83,7 +67,7 @@ func TestLogin_WrongEmail(t *testing.T) {
 
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t)
+	seedUser(t, struct{}{})
 	request := loginRequest
 	request.Email = "wrongEmail@gmail.com"
 
@@ -116,7 +100,7 @@ func TestLogin_WrongEmail(t *testing.T) {
 func TestLogin_PasswordIncorrect(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t)
+	seedUser(t, struct{}{})
 	request := loginRequest
 	request.Password = "wrongPassword"
 	jsonData, err := json.Marshal(request)
@@ -145,7 +129,7 @@ func TestLogin_PasswordIncorrect(t *testing.T) {
 func TestLogin_Success(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t)
+	seedUser[dtos.LoginUserDTO](t, loginRequest)
 	request, err := json.Marshal(loginRequest)
 	if err != nil {
 		t.Fatalf("Failed to marshal login request: %s", err)
@@ -166,7 +150,7 @@ func TestLogin_Success(t *testing.T) {
 	var responseJson utils.JsonResponse[dtos.LoginUserResponseDto]
 	err = json.Unmarshal(responseBody, &responseJson)
 	require.NoError(t, err, "Failed to marshal response")
-
+	//panic(fmt.Sprintf("unreachable: +%v", responseJson))
 	//ASSERT
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, loginRequest.Email, responseJson.Data.Email)
