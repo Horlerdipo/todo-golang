@@ -30,5 +30,17 @@ go.work.sum
 /bin
 /tmp
 # Editor/IDE
-# .idea/
-# .vscode/
+ .idea/
+*.iml
+
+# Binaries
+/bin/
+/bin/*
+/dist/
+
+# Logs
+*.log
+
+# SQLite DB
+*.sqlite
+identifier.sqlite

@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{})
+	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{}, &database.Todo{})
 	if err != nil {
 		log.Fatal(err)
 	}
