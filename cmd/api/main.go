@@ -31,14 +31,13 @@ func main() {
 	}
 
 	r := chi.NewRouter()
+	//r.Use(middleware.SupressNotFound)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.CleanPath)
+	r.Use(middleware.StripSlashes)
+	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{\"message\": \"pong\"}"))
-	})
 
 	appContainer := app.NewAppContainer(db)
 	appContainer.RegisterRoutes(r)

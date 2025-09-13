@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/users"
@@ -62,15 +61,7 @@ func (service *Service) Login(email string, password string) (dtos.LoginUserResp
 	//generate jwt token
 	ttlEnv := env.FetchInt("JWT_TTL", 24)
 	ttl := time.Now().Add(time.Duration(ttlEnv) * time.Hour)
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     ttl.Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString := ""
-	tokenString, err = token.SignedString([]byte(env.FetchString("JWT_SECRET")))
-
+	tokenString, err := utils.GenerateJwtToken(env.FetchString("JWT_SECRET"), ttl, user.ID)
 	if err != nil {
 		return dtos.LoginUserResponseDto{}, errors.New("error while signing token")
 	}
@@ -146,9 +137,23 @@ func (service *Service) ResetPassword(resetToken string, newPassword string) err
 	//update the password
 	err = service.UserRepository.UpdateUserPassword(user.ID, newPassword, true)
 	if err != nil {
-		log.Println("Error while updating user password: " + err.Error())
+		log.Println("Error while updating user password: ", err)
 		return errors.New("error while resetting password")
 	}
-
 	return nil
+}
+
+func (service *Service) FetchUserDetails(userId uint) (*dtos.UserDetailsDto, error) {
+	user, err := service.UserRepository.FindUserByID(userId)
+	if err != nil {
+		log.Print("Error while fetching user details: ", err)
+		return nil, errors.New("error while fetching user details")
+	}
+
+	return &dtos.UserDetailsDto{
+		ID:        user.ID,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+	}, nil
 }

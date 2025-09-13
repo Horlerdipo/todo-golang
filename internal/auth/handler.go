@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
+	"github.com/horlerdipo/todo-golang/internal/middlewares"
 	"github.com/horlerdipo/todo-golang/utils"
 	"log"
 	"net/http"
@@ -103,11 +104,35 @@ func (h *Handler) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
+	userIDValue := r.Context().Value(middlewares.UserKey)
+	if userIDValue == nil {
+		utils.RespondWithError(w, 400, "user not found", nil)
+		return
+	}
+
+	userId, ok := userIDValue.(uint)
+	if !ok {
+		utils.RespondWithError(w, 400, "invalid user type", nil)
+		return
+	}
+
+	user, err := h.AuthService.FetchUserDetails(userId)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	utils.RespondWithSuccess(w, http.StatusOK, "profile fetched", user)
+	return
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", h.loginHandler)
 		r.Post("/register", h.registerHandler)
 		r.Post("/password/forgot", h.sendResetPasswordToken)
 		r.Post("/password/reset", h.resetPasswordHandler)
+		r.With(middlewares.JwtAuthMiddleware).Get("/user", h.profileHandler)
 	})
 }

@@ -13,6 +13,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 type UserRepository interface {
+	FindUserByID(id uint) (*User, error)
 	FindUserByEmail(email string) (*User, error)
 	CreateUser(userDto *dtos.CreateUserDTO) (uint, error)
 	UpdateUser(userId uint, userDto *dtos.UpdateUserDTO) error
@@ -93,4 +94,13 @@ func (repo *userRepository) UpdateUserPassword(userId uint, password string, res
 	}
 
 	return nil
+}
+
+func (repo *userRepository) FindUserByID(id uint) (*User, error) {
+	userModel := User{}
+	result := repo.db.Where("id = ?", id).First(&userModel)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &userModel, nil
 }
