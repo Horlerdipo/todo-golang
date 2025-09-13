@@ -45,7 +45,7 @@ func setupGlobalServer() *TestServer {
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&database.User{})
+	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{})
 	if err != nil {
 		log.Fatal(err)
 	}
