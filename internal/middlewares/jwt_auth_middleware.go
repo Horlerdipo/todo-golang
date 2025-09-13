@@ -2,7 +2,9 @@ package middlewares
 
 import (
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/horlerdipo/todo-golang/env"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/utils"
 	"golang.org/x/net/context"
 	"net/http"
@@ -11,35 +13,70 @@ import (
 
 type contextKey string
 
+type AuthDetails struct {
+	UserId            uint
+	JwtToken          string
+	JwtExpirationTime *jwt.NumericDate
+}
+
 const UserKey contextKey = "user"
 
-func JwtAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("attempting to authenticate")
-		//check if auth header exists
-		header := r.Header.Get("Authorization")
-		if header == "" {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
-		}
+func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepository) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Println("attempting to authenticate")
+			//check if auth header exists
+			header := r.Header.Get("Authorization")
+			if header == "" {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
 
-		//take code out of bearer string
-		tokenString := strings.Split(header, " ")[1]
-		if tokenString == "" {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
-		}
+			//take code out of bearer string
+			tokenString := ""
+			tokens := strings.Split(header, " ")
+			if len(tokens) > 1 {
+				tokenString = tokens[1]
+			}
 
-		//check code validity
-		claim, err := utils.ValidateJwtToken(tokenString, env.FetchString("JWT_SECRET"))
-		if err != nil {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
-		}
+			if tokenString == "" {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
 
-		if claim == nil {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
-		}
+			//check code validity
+			claim, err := utils.ValidateJwtToken(tokenString, env.FetchString("JWT_SECRET"))
+			if err != nil {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
 
-		//add user id to Context
-		ctx := context.WithValue(r.Context(), UserKey, uint(claim["data"].(float64)))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			if claim == nil {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
+
+			//check if token is not blacklisted
+			isTokenBlackListed := tokenBlacklistRepository.CheckTokenExistence(tokenString)
+			if isTokenBlackListed {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
+
+			//add user details to Context
+			expTime, err := claim.GetExpirationTime()
+			if err != nil {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), UserKey, AuthDetails{
+				UserId:            uint(claim["data"].(float64)),
+				JwtToken:          tokenString,
+				JwtExpirationTime: expTime,
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+
 }

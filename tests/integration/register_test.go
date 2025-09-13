@@ -3,8 +3,8 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
-	"github.com/horlerdipo/todo-golang/internal/users"
 	"github.com/horlerdipo/todo-golang/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +41,7 @@ func TestRegister_EmailAlreadyRegistered(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
 	hashedPassword, _ := utils.HashPassword("password123")
-	user := users.User{
+	user := database.User{
 		FirstName: "John",
 		LastName:  "Doe",
 		Email:     registerRequest.Email,
@@ -93,7 +93,7 @@ func TestRegister_Success(t *testing.T) {
 	// ASSERT:
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Should return 204 for successful registration")
 
-	var dbUser users.User
+	var dbUser database.User
 	result := TestServerInstance.DB.Where("email = ?", registerRequest.Email).First(&dbUser)
 	assert.NoError(t, result.Error, "User should exist in database")
 	assert.Equal(t, registerRequest.Email, dbUser.Email, "User should match email")

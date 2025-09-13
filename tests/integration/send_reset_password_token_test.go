@@ -3,7 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/utils"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -91,7 +91,7 @@ func TestResetPasswordToken_Success(t *testing.T) {
 
 	//ASSERT
 	assert.Equal(t, http.StatusNoContent, response.StatusCode)
-	user := users.User{}
+	user := database.User{}
 	result := TestServerInstance.DB.First(&user, "email = ?", initiateResetPasswordRequest.Email)
 	if result.Error != nil {
 		t.Fatal("Unable to find user with email", initiateResetPasswordRequest.Email)

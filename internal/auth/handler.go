@@ -105,19 +105,9 @@ func (h *Handler) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
-	userIDValue := r.Context().Value(middlewares.UserKey)
-	if userIDValue == nil {
-		utils.RespondWithError(w, 400, "user not found", nil)
-		return
-	}
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 
-	userId, ok := userIDValue.(uint)
-	if !ok {
-		utils.RespondWithError(w, 400, "invalid user type", nil)
-		return
-	}
-
-	user, err := h.AuthService.FetchUserDetails(userId)
+	user, err := h.AuthService.FetchUserDetails(authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -127,12 +117,28 @@ func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+	resp := h.AuthService.LogoutUser(authDetails.JwtToken, authDetails.JwtExpirationTime.Time)
+	if !resp {
+		utils.RespondWithError(w, http.StatusInternalServerError, "unable to log out, please try again", nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", h.loginHandler)
 		r.Post("/register", h.registerHandler)
 		r.Post("/password/forgot", h.sendResetPasswordToken)
 		r.Post("/password/reset", h.resetPasswordHandler)
-		r.With(middlewares.JwtAuthMiddleware).Get("/user", h.profileHandler)
+		r.Group(func(r chi.Router) {
+			r.Use(middlewares.JwtAuthMiddleware(h.AuthService.TokenBlacklistRepository))
+			r.Get("/user", h.profileHandler)
+			r.Post("/logout", h.logoutHandler)
+		})
 	})
 }

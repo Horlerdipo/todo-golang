@@ -3,7 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/utils"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -152,7 +152,7 @@ func TestResetPassword_Success(t *testing.T) {
 
 	//ASSERT
 	assert.Equal(t, http.StatusNoContent, response.StatusCode)
-	newUser := users.User{}
+	newUser := database.User{}
 	result := TestServerInstance.DB.First(&newUser, "id = ?", user.ID)
 	if result.Error != nil {
 		t.Fatal("User not found", result.Error)

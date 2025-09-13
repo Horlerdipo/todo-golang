@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/app"
-	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"log"
@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&users.User{})
+	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{})
 	if err != nil {
 		log.Fatal(err)
 	}

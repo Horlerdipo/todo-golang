@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -12,7 +12,10 @@ type Container struct {
 }
 
 func NewContainer(db *gorm.DB) *Container {
-	authService := NewService(users.NewUserRepository(db))
+	authService := NewService(
+		database.NewUserRepository(db),
+		database.NewTokenBlacklistRepository(db),
+	)
 
 	return &Container{
 		AuthHandler: NewAuthHandler(authService),

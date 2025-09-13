@@ -46,7 +46,7 @@ func GenerateJwtToken(secretKey string, ttl time.Time, data interface{}) (string
 	return tokenString, nil
 }
 
-func ValidateJwtToken(tokenString string, secretKey string) (map[string]any, error) {
+func ValidateJwtToken(tokenString string, secretKey string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})

@@ -1,4 +1,4 @@
-package users
+package database
 
 import (
 	"github.com/horlerdipo/todo-golang/internal/dtos"

@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/app"
-	"github.com/horlerdipo/todo-golang/internal/users"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -15,6 +15,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type TestServer struct {
@@ -24,7 +25,7 @@ type TestServer struct {
 }
 
 var TestServerInstance *TestServer
-var DBName string = "todo-golang-test.db"
+var DBName = "todo-golang-test.db"
 
 func TestMain(m *testing.M) {
 	env.LoadEnv(".env.testing")
@@ -44,7 +45,7 @@ func setupGlobalServer() *TestServer {
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&users.User{})
+	err = db.AutoMigrate(&database.User{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,11 +167,11 @@ func quoteTableName(db *gorm.DB, tableName string) string {
 	}
 }
 
-func seedUser[T any](t *testing.T, input T) *users.User {
+func seedUser[T any](t *testing.T, input T) *database.User {
 	t.Helper()
 
 	// Defaults
-	user := users.User{
+	user := database.User{
 		FirstName:           "John",
 		LastName:            "Doe",
 		Email:               "testing@gmail.com",
@@ -206,4 +207,13 @@ func seedUser[T any](t *testing.T, input T) *users.User {
 		t.Fatal(result.Error)
 	}
 	return &user
+}
+
+func GenerateTestJwtToken(t *testing.T, userID uint) string {
+	ttl := time.Now().Add(time.Hour * time.Duration(env.FetchInt("JWT_TTL")))
+	token, err := utils.GenerateJwtToken(env.FetchString("JWT_SECRET"), ttl, userID)
+	if err != nil {
+		t.Fatal("uable to generate JWT token", err)
+	}
+	return token
 }

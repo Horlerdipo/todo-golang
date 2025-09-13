@@ -3,8 +3,8 @@ package auth
 import (
 	"errors"
 	"github.com/horlerdipo/todo-golang/env"
+	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
-	"github.com/horlerdipo/todo-golang/internal/users"
 	"github.com/horlerdipo/todo-golang/pkg"
 	"github.com/horlerdipo/todo-golang/utils"
 	"log"
@@ -14,12 +14,14 @@ import (
 )
 
 type Service struct {
-	UserRepository users.UserRepository
+	UserRepository           database.UserRepository
+	TokenBlacklistRepository database.TokenBlacklistRepository
 }
 
-func NewService(userRepository users.UserRepository) *Service {
+func NewService(userRepository database.UserRepository, tokenBlacklistRepository database.TokenBlacklistRepository) *Service {
 	return &Service{
-		UserRepository: userRepository,
+		UserRepository:           userRepository,
+		TokenBlacklistRepository: tokenBlacklistRepository,
 	}
 }
 
@@ -156,4 +158,12 @@ func (service *Service) FetchUserDetails(userId uint) (*dtos.UserDetailsDto, err
 		LastName:  user.LastName,
 		Email:     user.Email,
 	}, nil
+}
+
+func (service *Service) LogoutUser(authToken string, tokenExpirationDate time.Time) bool {
+	_, err := service.TokenBlacklistRepository.InsertToken(authToken, &tokenExpirationDate)
+	if err != nil {
+		return false
+	}
+	return true
 }
