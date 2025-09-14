@@ -19,13 +19,20 @@ func main() {
 	db, err := gorm.Open(sqlite.Dialector{
 		DriverName: "sqlite", // <-- must match the imported driver
 		DSN:        "test.db",
-	}, &gorm.Config{})
+	}, &gorm.Config{
+		SkipDefaultTransaction: true,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{}, &database.Todo{})
+	err = db.AutoMigrate(
+		&database.User{},
+		&database.TokenBlacklist{},
+		&database.Todo{},
+		&database.Checklist{},
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

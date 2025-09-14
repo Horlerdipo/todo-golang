@@ -34,8 +34,6 @@ go.work.sum
 *.iml
 
 # Binaries
-/bin/
-/bin/*
 /dist/
 
 # Logs
