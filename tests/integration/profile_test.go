@@ -13,7 +13,7 @@ import (
 func TestProfile_Success(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	user := seedUser(t, struct{}{})
+	user := SeedUser(t, struct{}{})
 
 	req, err := http.NewRequest("GET", TestServerInstance.Server.URL+"/auth/user", nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestProfile_Unauthorized(t *testing.T) {
 func TestProfile_WrongAuthenticationToken(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, struct{}{})
+	SeedUser(t, struct{}{})
 
 	req, err := http.NewRequest("GET", TestServerInstance.Server.URL+"/auth/user", nil)
 	if err != nil {

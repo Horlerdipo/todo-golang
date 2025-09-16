@@ -3,9 +3,11 @@ package integration
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-faker/faker/v4"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/app"
 	"github.com/horlerdipo/todo-golang/internal/database"
+	"github.com/horlerdipo/todo-golang/internal/enums"
 	"github.com/horlerdipo/todo-golang/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -45,7 +47,7 @@ func setupGlobalServer() *TestServer {
 	}
 
 	// Migrate models
-	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{})
+	err = db.AutoMigrate(&database.User{}, &database.TokenBlacklist{}, &database.Todo{}, &database.Checklist{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +169,7 @@ func quoteTableName(db *gorm.DB, tableName string) string {
 	}
 }
 
-func seedUser[T any](t *testing.T, input T) *database.User {
+func SeedUser[T any](t *testing.T, input T) *database.User {
 	t.Helper()
 
 	// Defaults
@@ -213,7 +215,46 @@ func GenerateTestJwtToken(t *testing.T, userID uint) string {
 	ttl := time.Now().Add(time.Hour * time.Duration(env.FetchInt("JWT_TTL")))
 	token, err := utils.GenerateJwtToken(env.FetchString("JWT_SECRET"), ttl, userID)
 	if err != nil {
-		t.Fatal("uable to generate JWT token", err)
+		t.Fatal("unable to generate JWT token", err)
 	}
 	return token
+}
+
+func SeedTodo[T any](t *testing.T, input T, userId uint) *database.Todo {
+	t.Helper()
+
+	// Defaults
+	sentence := faker.Sentence()
+	todo := database.Todo{
+		Title:   faker.Sentence(),
+		Content: &sentence,
+		Type:    enums.Text,
+		UserID:  userId,
+	}
+
+	inputValue := reflect.ValueOf(&input).Elem()
+	inputType := inputValue.Type()
+
+	if inputType.Kind() != reflect.Struct {
+		t.Fatalf("seedTodo expects a struct, got %s", inputType.Kind())
+	}
+
+	defaultValue := reflect.ValueOf(&todo).Elem()
+	defaultType := defaultValue.Type()
+
+	for i := 0; i < defaultType.NumField(); i++ {
+		field := defaultValue.Field(i)
+		fieldType := defaultType.Field(i)
+
+		inField := inputValue.FieldByName(fieldType.Name)
+		if inField.IsValid() && !inField.IsZero() && field.CanSet() {
+			field.Set(inField)
+		}
+	}
+
+	result := TestServerInstance.DB.Create(&todo)
+	if result.Error != nil {
+		t.Fatal(result.Error)
+	}
+	return &todo
 }

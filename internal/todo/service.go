@@ -2,10 +2,12 @@ package todo
 
 import (
 	"errors"
+	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/enums"
 	"log"
+	"strconv"
 )
 
 type Service struct {
@@ -21,7 +23,7 @@ func NewService(todoRepository database.TodoRepository, blacklistRepository data
 }
 
 func (service *Service) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, error) {
-	if createTodoDto.Type == enums.Task {
+	if createTodoDto.Type == enums.Text {
 		createTodoDto.Content = nil
 	}
 
@@ -105,4 +107,34 @@ func (service *Service) UpdateChecklistItemStatus(checklistId uint, done bool, t
 	}
 
 	return service.TodoRepository.UpdateChecklistItemStatus(checklistId, todoId, done)
+}
+
+func (service *Service) PinTodo(todoId uint, userId uint) error {
+	//check if the number of pinned is not more than 5
+	maxPinnedTodos := env.FetchInt("MAXIMUM_PINNED_TODOS", 1)
+	pinnedTodos := service.TodoRepository.CountPinnedTodos(userId)
+	if int(pinnedTodos) >= maxPinnedTodos {
+		return errors.New("you can only pin " + strconv.Itoa(maxPinnedTodos) + " todos")
+	}
+
+	//check if to-do belongs to user
+	_, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+	if err != nil {
+		log.Println(err)
+		return errors.New("todo does not exist")
+	}
+
+	return service.TodoRepository.PinTodo(todoId)
+}
+
+func (service *Service) UnPinTodo(todoId uint, userId uint) error {
+
+	//check if to-do belongs to user
+	_, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+	if err != nil {
+		log.Println(err)
+		return errors.New("todo does not exist")
+	}
+
+	return service.TodoRepository.UnPinTodo(todoId)
 }

@@ -11,4 +11,5 @@ type Todo struct {
 	Type    enums.TodoType `json:"type"`
 	UserID  uint           `json:"user_id"`
 	User    User           `gorm:"constraint:OnDelete:CASCADE" json:"user"`
+	Pinned  bool           `gorm:"default:false" json:"pinned"`
 }

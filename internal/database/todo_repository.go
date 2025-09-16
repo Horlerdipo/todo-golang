@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
+	"github.com/horlerdipo/todo-golang/internal/enums"
 	"gorm.io/gorm"
 	"log"
 )
@@ -11,6 +12,9 @@ type TodoRepository interface {
 	CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, error)
 	DeleteTodo(todoId uint) error
 	FindTodoByUserId(todoId uint, userId uint) (*Todo, error)
+	PinTodo(todoId uint) error
+	UnPinTodo(todoId uint) error
+	CountPinnedTodos(userId uint) int64
 
 	AddChecklistItem(todoId uint, description string) (uint, error)
 	DeleteChecklistItem(checklistId uint, todoId uint) error
@@ -40,19 +44,20 @@ func (repo todoRepository) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, 
 			return result.Error
 		}
 
-		var checklists []Checklist
-		for _, checklist := range createTodoDto.Checklist {
-			checklistModel := Checklist{
-				Description: checklist,
-				Done:        false,
-				TodoID:      todoModel.ID,
+		if createTodoDto.Type == enums.Checklist {
+			var checklists []Checklist
+			for _, checklist := range createTodoDto.Checklist {
+				checklistModel := Checklist{
+					Description: checklist,
+					Done:        false,
+					TodoID:      todoModel.ID,
+				}
+				checklists = append(checklists, checklistModel)
 			}
-			checklists = append(checklists, checklistModel)
-		}
-
-		result = tx.Create(&checklists)
-		if result.Error != nil {
-			return result.Error
+			result = tx.Create(&checklists)
+			if result.Error != nil {
+				return result.Error
+			}
 		}
 
 		return nil
@@ -88,6 +93,30 @@ func (repo todoRepository) FindTodoByUserId(todoId uint, userId uint) (*Todo, er
 		return nil, result.Error
 	}
 	return &todo, nil
+}
+
+func (repo todoRepository) PinTodo(todoId uint) error {
+	result := repo.db.Model(&Todo{}).Where("id = ?", todoId).Update("pinned", true)
+	if result.Error != nil {
+		log.Println(result.Error)
+		return errors.New("unable to pin todo, please try again")
+	}
+	return nil
+}
+
+func (repo todoRepository) UnPinTodo(todoId uint) error {
+	result := repo.db.Model(&Todo{}).Where("id = ?", todoId).Update("pinned", false)
+	if result.Error != nil {
+		log.Println(result.Error)
+		return errors.New("unable to pin todo, please try again")
+	}
+	return nil
+}
+
+func (repo todoRepository) CountPinnedTodos(userId uint) int64 {
+	var count int64
+	repo.db.Model(&Todo{}).Where("user_id = ?", userId).Count(&count)
+	return count
 }
 
 func (repo todoRepository) AddChecklistItem(todoId uint, description string) (uint, error) {

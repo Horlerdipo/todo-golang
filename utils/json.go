@@ -116,7 +116,7 @@ func JsonValidate[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 				messages = append(messages, fe.Translate(trans))
 			}
 		}
-		RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("Validation error: %s", strings.Join(messages, ", ")), nil)
+		RespondWithError(w, http.StatusUnprocessableEntity, fmt.Sprintf("Validation error: %s", strings.Join(messages, ", ")), nil)
 		return payload, err
 	}
 

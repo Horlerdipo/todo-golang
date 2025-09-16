@@ -44,7 +44,7 @@ func TestResetPassword_ValidationError(t *testing.T) {
 	err = json.Unmarshal(responseBody, &responseJson)
 
 	//ASSERT:
-	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
 	assert.Contains(t, responseJson.Message, "Validation error")
 }
 
@@ -52,7 +52,7 @@ func TestResetPassword_IncorrectToken(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
 	resetTokenTime := time.Now().Add(time.Hour * 24)
-	seedUser(t, struct {
+	SeedUser(t, struct {
 		ResetToken          *string
 		ResetTokenExpiresAt *time.Time
 	}{
@@ -91,7 +91,7 @@ func TestResetPassword_ExpiredToken(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
 	resetTokenTime := time.Now().Add(-time.Hour * 24)
-	seedUser(t, struct {
+	SeedUser(t, struct {
 		ResetToken          *string
 		ResetTokenExpiresAt *time.Time
 	}{
@@ -130,7 +130,7 @@ func TestResetPassword_Success(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
 	resetTokenTime := time.Now().Add(time.Hour * 24)
-	user := seedUser(t, struct {
+	user := SeedUser(t, struct {
 		ResetToken          *string
 		ResetTokenExpiresAt *time.Time
 	}{

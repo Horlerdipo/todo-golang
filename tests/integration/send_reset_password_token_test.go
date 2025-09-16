@@ -20,7 +20,7 @@ var initiateResetPasswordRequest = struct {
 func TestResetPasswordToken_ValidationError(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, initiateResetPasswordRequest)
+	SeedUser(t, initiateResetPasswordRequest)
 	request, err := json.Marshal(struct{}{})
 	if err != nil {
 		t.Fatal("Unable to marshal initiate reset password request", err)
@@ -42,7 +42,7 @@ func TestResetPasswordToken_ValidationError(t *testing.T) {
 	err = json.Unmarshal(responseBody, &responseJson)
 
 	//ASSERT:
-	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, response.StatusCode)
 	assert.Contains(t, responseJson.Message, "Validation error")
 }
 
@@ -76,7 +76,7 @@ func TestResetPasswordToken_UnregisteredEmail(t *testing.T) {
 func TestResetPasswordToken_Success(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, initiateResetPasswordRequest)
+	SeedUser(t, initiateResetPasswordRequest)
 	request, err := json.Marshal(initiateResetPasswordRequest)
 	if err != nil {
 		t.Fatal("Unable to marshal initiate reset password request", err)

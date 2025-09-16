@@ -31,13 +31,13 @@ func TestLogin_ValidationError(t *testing.T) {
 	defer resp.Body.Close()
 
 	//ASSERT
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "Expected 400 Bad Request")
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "Expected 400 Bad Request")
 }
 
 func TestLogin_EmailDoesNotExist(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, struct{}{})
+	SeedUser(t, struct{}{})
 
 	jsonData, err := json.Marshal(dtos.LoginUserDTO{
 		Email:    "johndoe@kkdkd.com",
@@ -67,7 +67,7 @@ func TestLogin_WrongEmail(t *testing.T) {
 
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, struct{}{})
+	SeedUser(t, struct{}{})
 	request := loginRequest
 	request.Email = "wrongEmail@gmail.com"
 
@@ -100,7 +100,7 @@ func TestLogin_WrongEmail(t *testing.T) {
 func TestLogin_PasswordIncorrect(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, struct{}{})
+	SeedUser(t, struct{}{})
 	request := loginRequest
 	request.Password = "wrongPassword"
 	jsonData, err := json.Marshal(request)
@@ -129,7 +129,7 @@ func TestLogin_PasswordIncorrect(t *testing.T) {
 func TestLogin_Success(t *testing.T) {
 	//ARRANGE
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser[dtos.LoginUserDTO](t, loginRequest)
+	SeedUser[dtos.LoginUserDTO](t, loginRequest)
 	request, err := json.Marshal(loginRequest)
 	if err != nil {
 		t.Fatalf("Failed to marshal login request: %s", err)

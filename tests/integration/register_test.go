@@ -34,7 +34,7 @@ func TestRegister_ValidationError(t *testing.T) {
 	defer resp.Body.Close()
 
 	//ASSERT
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 }
 
 func TestRegister_EmailAlreadyRegistered(t *testing.T) {

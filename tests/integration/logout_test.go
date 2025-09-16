@@ -11,7 +11,7 @@ import (
 func TestLogout_Success(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	user := seedUser(t, struct{}{})
+	user := SeedUser(t, struct{}{})
 
 	req, err := http.NewRequest("POST", TestServerInstance.Server.URL+"/auth/logout", nil)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestLogout_Unauthorized(t *testing.T) {
 func TestLogout_WrongAuthenticationToken(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	seedUser(t, struct{}{})
+	SeedUser(t, struct{}{})
 
 	req, err := http.NewRequest("POST", TestServerInstance.Server.URL+"/auth/logout", nil)
 	if err != nil {
@@ -80,7 +80,7 @@ func TestLogout_WrongAuthenticationToken(t *testing.T) {
 func TestLogout_BlacklistedToken(t *testing.T) {
 	//ARRANGE:
 	ClearAllTables(t, TestServerInstance.DB)
-	user := seedUser(t, struct{}{})
+	user := SeedUser(t, struct{}{})
 
 	req, err := http.NewRequest("POST", TestServerInstance.Server.URL+"/auth/logout", nil)
 	if err != nil {

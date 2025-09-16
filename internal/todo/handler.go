@@ -56,6 +56,38 @@ func (handler *Handler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (handler *Handler) PinTodo(w http.ResponseWriter, r *http.Request) {
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+	todoId, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "todo not found", nil)
+		return
+	}
+
+	err = handler.TodoService.PinTodo(uint(todoId), authDetails.UserId)
+	if err != nil {
+		utils.RespondWithError(w, 400, err.Error(), nil)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (handler *Handler) UnPinTodo(w http.ResponseWriter, r *http.Request) {
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+	todoId, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "todo not found", nil)
+		return
+	}
+
+	err = handler.TodoService.UnPinTodo(uint(todoId), authDetails.UserId)
+	if err != nil {
+		utils.RespondWithError(w, 400, err.Error(), nil)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (handler *Handler) AddChecklistItem(w http.ResponseWriter, r *http.Request) {
 	todoId := chi.URLParam(r, "id")
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
@@ -163,9 +195,16 @@ func (handler *Handler) RegisterRoutes(r chi.Router) {
 		r.Use(middlewares.JwtAuthMiddleware(handler.TodoService.TokenBlacklistRepository))
 		r.Post("/", handler.CreateTodo)
 		r.Delete("/{id}", handler.DeleteTodo)
-		r.Post("/{id}/checklist", handler.AddChecklistItem)
-		r.Delete("/{id}/checklist/{itemId}", handler.DeleteChecklistItem)
-		r.Put("/{id}/checklist/{itemId}", handler.UpdateChecklistItem)
-		r.Patch("/{id}/checklist/{itemId}", handler.UpdateChecklistItemStatus)
+		r.Patch("/{id}/pin", handler.PinTodo)
+		r.Patch("/{id}/unpin", handler.UnPinTodo)
+
+		//Checklist
+		r.Group(func(r chi.Router) {
+			r.Post("/{id}/checklist", handler.AddChecklistItem)
+			r.Delete("/{id}/checklist/{itemId}", handler.DeleteChecklistItem)
+			r.Put("/{id}/checklist/{itemId}", handler.UpdateChecklistItem)
+			r.Patch("/{id}/checklist/{itemId}", handler.UpdateChecklistItemStatus)
+		})
+
 	})
 }
