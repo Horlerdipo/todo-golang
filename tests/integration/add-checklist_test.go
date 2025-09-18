@@ -234,7 +234,7 @@ func preventChecklistAdditionSetup(t *testing.T) AddItemToTodoChecklistSetupResp
 func preventChecklistAdditionExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
 	t.Helper()
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("").First(&checklist)
+	result := TestServerInstance.DB.Where("todo_id", setup.Todo.ID).First(&checklist)
 	if result.Error == nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}

@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/database"
@@ -24,7 +23,6 @@ const UserKey contextKey = "user"
 func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Println("attempting to authenticate")
 			//check if auth header exists
 			header := r.Header.Get("Authorization")
 			if header == "" {

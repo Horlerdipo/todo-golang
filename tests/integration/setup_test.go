@@ -11,6 +11,7 @@ import (
 	"github.com/horlerdipo/todo-golang/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"io"
 	"log"
 	_ "modernc.org/sqlite"
@@ -43,7 +44,9 @@ func setupGlobalServer() *TestServer {
 	db, err := gorm.Open(sqlite.Dialector{
 		DriverName: "sqlite", // <-- must match the imported driver
 		DSN:        DBName,
-	}, &gorm.Config{})
+	}, &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,26 +187,7 @@ func SeedUser[T any](t *testing.T, input T) *database.User {
 		ResetTokenExpiresAt: nil,
 	}
 
-	inputValue := reflect.ValueOf(&input).Elem()
-	inputType := inputValue.Type()
-
-	if inputType.Kind() != reflect.Struct {
-		t.Fatalf("seedUser expects a struct, got %s", inputType.Kind())
-	}
-
-	defaultValue := reflect.ValueOf(&user).Elem()
-	defaultType := defaultValue.Type()
-
-	for i := 0; i < defaultType.NumField(); i++ {
-		field := defaultValue.Field(i)
-		fieldType := defaultType.Field(i)
-
-		inField := inputValue.FieldByName(fieldType.Name)
-		if inField.IsValid() && !inField.IsZero() && field.CanSet() {
-			field.Set(inField)
-		}
-	}
-
+	mergeStruct[T](t, &user, input)
 	hashedPassword, _ := utils.HashPassword(user.Password)
 	user.Password = hashedPassword
 	result := TestServerInstance.DB.Create(&user)
@@ -235,29 +219,50 @@ func SeedTodo[T any](t *testing.T, input T, userId uint) *database.Todo {
 		UserID:  userId,
 	}
 
-	inputValue := reflect.ValueOf(&input).Elem()
-	inputType := inputValue.Type()
+	mergeStruct[T](t, &todo, input)
+	result := TestServerInstance.DB.Create(&todo)
+	if result.Error != nil {
+		t.Fatal(result.Error)
+	}
+	return &todo
+}
 
-	if inputType.Kind() != reflect.Struct {
-		t.Fatalf("seedTodo expects a struct, got %s", inputType.Kind())
+func SeedChecklist[T any](t *testing.T, input T, todoId uint) *database.Checklist {
+	t.Helper()
+
+	// Defaults
+	sentence := faker.Sentence()
+	checklist := database.Checklist{
+		Description: sentence,
+		TodoID:      todoId,
 	}
 
-	defaultValue := reflect.ValueOf(&todo).Elem()
-	defaultType := defaultValue.Type()
+	mergeStruct[T](t, &checklist, input)
+	result := TestServerInstance.DB.Create(&checklist)
+	if result.Error != nil {
+		t.Fatal(result.Error)
+	}
+	return &checklist
+}
 
-	for i := 0; i < defaultType.NumField(); i++ {
-		field := defaultValue.Field(i)
-		fieldType := defaultType.Field(i)
+func mergeStruct[T any, B any](t *testing.T, target *B, input T) {
+	t.Helper()
+
+	inputValue := reflect.ValueOf(input)
+	if inputValue.Kind() != reflect.Struct {
+		t.Fatalf("mergeStruct expects a struct, got %s", inputValue.Kind())
+	}
+
+	targetValue := reflect.ValueOf(target).Elem()
+	targetType := targetValue.Type()
+
+	for i := 0; i < targetType.NumField(); i++ {
+		field := targetValue.Field(i)
+		fieldType := targetType.Field(i)
 
 		inField := inputValue.FieldByName(fieldType.Name)
 		if inField.IsValid() && !inField.IsZero() && field.CanSet() {
 			field.Set(inField)
 		}
 	}
-
-	result := TestServerInstance.DB.Create(&todo)
-	if result.Error != nil {
-		t.Fatal(result.Error)
-	}
-	return &todo
 }
