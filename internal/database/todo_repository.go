@@ -143,7 +143,7 @@ func (repo todoRepository) DeleteChecklistItem(checklistId uint, todoId uint) er
 }
 
 func (repo todoRepository) UpdateChecklistItem(checklistId uint, todoId uint, description string) (uint, error) {
-	result := repo.db.Debug().Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("description", description)
+	result := repo.db.Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("description", description)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return 0, errors.New("checklist not found")

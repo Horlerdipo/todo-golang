@@ -15,5 +15,5 @@ type ChecklistItem struct {
 }
 
 type ChecklistStatus struct {
-	Done bool `json:"done" validate:"required"`
+	Done bool `json:"done" validate:"boolean"`
 }

@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func SetupUpdateChecklistTest(t *testing.T) (*database.User, string, *database.Checklist) {
+func SetupUpdateChecklistStatusTest(t *testing.T) (*database.User, string, *database.Checklist) {
 	t.Helper()
 
 	ClearAllTables(t, TestServerInstance.DB)
@@ -28,38 +28,31 @@ func SetupUpdateChecklistTest(t *testing.T) (*database.User, string, *database.C
 	return user, authToken, checklist
 }
 
-type UpdateItemOnTodoChecklistSetupResponse struct {
-	AuthToken     string
-	User          *database.User
-	Checklist     *database.Checklist
-	ChecklistItem string
+type UpdateItemStatusOnTodoChecklistSetupResponse struct {
+	AuthToken string
+	User      *database.User
+	Checklist *database.Checklist
+	Status    bool
 }
 
-func TestUpdateChecklistOnTodo(t *testing.T) {
+func TestUpdateChecklistStatusOnTodo(t *testing.T) {
 	tests := []struct {
 		description        string
-		setupFunc          func(t *testing.T) UpdateItemOnTodoChecklistSetupResponse
+		setupFunc          func(t *testing.T) UpdateItemStatusOnTodoChecklistSetupResponse
 		expectedStatusCode int
 		expectedMsg        string
-		extraAssertions    func(t *testing.T, setupFuncResponse *UpdateItemOnTodoChecklistSetupResponse)
+		extraAssertions    func(t *testing.T, setupFuncResponse *UpdateItemStatusOnTodoChecklistSetupResponse)
 	}{
 		{
-			description:        "checklist can be updated successfully",
-			setupFunc:          updateChecklistSuccessfullySetup,
+			description:        "checklist can be marked as done successfully",
+			setupFunc:          markChecklistAsDoneSuccessfullySetup,
 			expectedStatusCode: http.StatusNoContent,
 			expectedMsg:        "",
-			extraAssertions:    updateChecklistSuccessfullyExtraAssertions,
-		},
-		{
-			description:        "checklist returns validation error",
-			setupFunc:          updateItemOnTodoChecklistValidationErrorSetup,
-			expectedStatusCode: http.StatusUnprocessableEntity,
-			expectedMsg:        "",
-			extraAssertions:    updateItemOnTodoChecklistValidationErrorExtraAssertions,
+			extraAssertions:    markChecklistAsDoneSuccessfullyExtraAssertions,
 		},
 		{
 			description:        "returns error when incorrect Todo ID is used",
-			setupFunc:          updateItemOnToChecklistWithIncorrectTodoSetup,
+			setupFunc:          updateChecklistStatusWithIncorrectTodoSetup,
 			expectedStatusCode: http.StatusBadRequest,
 			expectedMsg:        "todo does not exist",
 			extraAssertions:    nil,
@@ -71,15 +64,15 @@ func TestUpdateChecklistOnTodo(t *testing.T) {
 
 			setup := tt.setupFunc(subTest)
 
-			jsonRequest, err := json.Marshal(map[string]string{
-				"item": setup.ChecklistItem,
+			jsonRequest, err := json.Marshal(map[string]bool{
+				"done": setup.Status,
 			})
 			if err != nil {
 				t.Fatal("Failed to marshal request")
 			}
 
 			url := fmt.Sprintf("%s/todos/%d/checklist/%d", TestServerInstance.Server.URL, setup.Checklist.TodoID, setup.Checklist.ID)
-			req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonRequest))
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonRequest))
 			if err != nil {
 				t.Fatalf("failed to create request: %v", err)
 			}
@@ -118,63 +111,71 @@ func TestUpdateChecklistOnTodo(t *testing.T) {
 	}
 }
 
-func updateChecklistSuccessfullySetup(t *testing.T) UpdateItemOnTodoChecklistSetupResponse {
+func markChecklistAsDoneSuccessfullySetup(t *testing.T) UpdateItemStatusOnTodoChecklistSetupResponse {
 	t.Helper()
 	user, authToken, checklist := SetupUpdateChecklistTest(t)
-	return UpdateItemOnTodoChecklistSetupResponse{
-		AuthToken:     authToken,
-		User:          user,
-		Checklist:     checklist,
-		ChecklistItem: "Testing",
+	return UpdateItemStatusOnTodoChecklistSetupResponse{
+		AuthToken: authToken,
+		User:      user,
+		Checklist: checklist,
+		Status:    true,
 	}
 }
 
-func updateChecklistSuccessfullyExtraAssertions(t *testing.T, setup *UpdateItemOnTodoChecklistSetupResponse) {
+func markChecklistAsDoneSuccessfullyExtraAssertions(t *testing.T, setup *UpdateItemStatusOnTodoChecklistSetupResponse) {
 	t.Helper()
 
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("todo_id", setup.Checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
 
-	if checklist.Description != setup.ChecklistItem {
-		t.Errorf("expected checklist description %v, but got %v", setup.ChecklistItem, checklist.Description)
+	if checklist.Done != setup.Status {
+		t.Errorf("expected checklist status to be %v, but got %v", setup.Status, checklist.Done)
 	}
 }
 
-func updateItemOnTodoChecklistValidationErrorSetup(t *testing.T) UpdateItemOnTodoChecklistSetupResponse {
+func markChecklistAsNotDoneSuccessfullySetup(t *testing.T) UpdateItemStatusOnTodoChecklistSetupResponse {
 	t.Helper()
+
 	user, authToken, checklist := SetupUpdateChecklistTest(t)
-	return UpdateItemOnTodoChecklistSetupResponse{
-		AuthToken:     authToken,
-		User:          user,
-		Checklist:     checklist,
-		ChecklistItem: "",
+
+	result := TestServerInstance.DB.Model(&checklist).Update("done", true)
+	if result.Error != nil {
+		t.Fatalf("failed to mark checklist as Done: %v", result.Error)
+	}
+
+	return UpdateItemStatusOnTodoChecklistSetupResponse{
+		AuthToken: authToken,
+		User:      user,
+		Checklist: checklist,
+		Status:    false,
 	}
 }
 
-func updateItemOnTodoChecklistValidationErrorExtraAssertions(t *testing.T, setup *UpdateItemOnTodoChecklistSetupResponse) {
+func markChecklistAsNotDoneSuccessfullyExtraAssertions(t *testing.T, setup *UpdateItemStatusOnTodoChecklistSetupResponse) {
 	t.Helper()
+
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("id", checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
 
-	if checklist.Description == setup.ChecklistItem {
-		t.Errorf("expected checklist description %v, but got %v", checklist.Description, setup.ChecklistItem)
+	if checklist.Done != setup.Status {
+		t.Errorf("expected checklist status to be %v, but got %v", setup.Status, checklist.Done)
 	}
 }
 
-func updateItemOnToChecklistWithIncorrectTodoSetup(t *testing.T) UpdateItemOnTodoChecklistSetupResponse {
+func updateChecklistStatusWithIncorrectTodoSetup(t *testing.T) UpdateItemStatusOnTodoChecklistSetupResponse {
 	t.Helper()
 	user, authToken, checklist := SetupUpdateChecklistTest(t)
 	checklist.TodoID = checklist.TodoID + 1
-	return UpdateItemOnTodoChecklistSetupResponse{
-		AuthToken:     authToken,
-		User:          user,
-		Checklist:     checklist,
-		ChecklistItem: "up manchester?",
+	return UpdateItemStatusOnTodoChecklistSetupResponse{
+		AuthToken: authToken,
+		User:      user,
+		Checklist: checklist,
+		Status:    true,
 	}
 }

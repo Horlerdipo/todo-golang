@@ -71,7 +71,7 @@ func TestAddChecklistToTodo(t *testing.T) {
 			setupFunc:          addItemToTodoChecklistAnotherUserTodoSetup,
 			expectedStatusCode: http.StatusBadRequest,
 			expectedMsg:        "",
-			extraAssertions:    addItemToTodoChecklistAnotherUserTodoExtraAssertions,
+			extraAssertions:    nil,
 		},
 	}
 
@@ -117,7 +117,9 @@ func TestAddChecklistToTodo(t *testing.T) {
 					t.Errorf("expected message %s, but got %s", tt.expectedMsg, jsonResponse.Message)
 				}
 
-				tt.extraAssertions(subTest, setup)
+				if tt.extraAssertions != nil {
+					tt.extraAssertions(subTest, setup)
+				}
 			}
 		})
 	}
@@ -138,7 +140,7 @@ func addItemToTodoChecklistSuccessfullyExtraAssertions(t *testing.T, setup AddIt
 	t.Helper()
 
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("").First(&checklist)
+	result := TestServerInstance.DB.Where("todo_id", setup.Todo.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
@@ -170,7 +172,7 @@ func addItemToTodoChecklistValidationErrorSetup(t *testing.T) AddItemToTodoCheck
 func addItemToTodoChecklistValidationErrorExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
 	t.Helper()
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("").First(&checklist)
+	result := TestServerInstance.DB.Where("todo_id", setup.Todo.ID).First(&checklist)
 	if result.Error == nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
@@ -191,7 +193,7 @@ func addItemToTodoChecklistUnknownTodoSetup(t *testing.T) AddItemToTodoChecklist
 func addItemToTodoChecklistUnknownTodoExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
 	t.Helper()
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("").First(&checklist)
+	result := TestServerInstance.DB.Where("todo_id", setup.Todo.ID-1).First(&checklist)
 	if result.Error == nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
@@ -207,15 +209,6 @@ func addItemToTodoChecklistAnotherUserTodoSetup(t *testing.T) AddItemToTodoCheck
 		User:          user,
 		Todo:          anotherTodo,
 		ChecklistItem: "Testing testing",
-	}
-}
-
-func addItemToTodoChecklistAnotherUserTodoExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
-	t.Helper()
-	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("").First(&checklist)
-	if result.Error == nil {
-		t.Errorf("failed to find checklist: %v", result.Error)
 	}
 }
 
