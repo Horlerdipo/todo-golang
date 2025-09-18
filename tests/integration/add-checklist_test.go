@@ -3,100 +3,239 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/horlerdipo/todo-golang/internal/database"
+	"github.com/horlerdipo/todo-golang/internal/enums"
 	"github.com/horlerdipo/todo-golang/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"net/http"
-	"strconv"
 	"testing"
 )
 
 func SetupAddChecklistTest(t *testing.T) (*database.User, string, *database.Todo) {
 	ClearAllTables(t, TestServerInstance.DB)
 	user := SeedUser(t, struct{}{})
-	todo := SeedTodo(t, struct{}{}, user.ID)
+	todo := SeedTodo(t, struct {
+		Type enums.TodoType
+	}{
+		Type: enums.Checklist,
+	}, user.ID)
 	authToken := GenerateTestJwtToken(t, user.ID)
 	return user, authToken, todo
 }
 
-func TestAddChecklist_Success(t *testing.T) {
-	//ARRANGE
-	_, authToken, todo := SetupPinTest(t)
-
-	req, err := http.NewRequest(http.MethodPatch, TestServerInstance.Server.URL+"/todos/"+strconv.Itoa(int(todo.ID))+"/pin", bytes.NewBuffer(nil))
-	require.NoError(t, err)
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+authToken)
-	//ACT
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	//ASSERT
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	newTodo := &database.Todo{}
-	result := TestServerInstance.DB.Where("id = ?", todo.ID).First(&newTodo)
-	assert.NoError(t, result.Error)
-	assert.Equal(t, true, newTodo.Pinned)
+type AddItemToTodoChecklistSetupResponse struct {
+	AuthToken     string
+	User          *database.User
+	Todo          *database.Todo
+	ChecklistItem string
 }
 
-func TestAddChecklist_NotFoundError(t *testing.T) {
-	//ARRANGE
-	ClearAllTables(t, TestServerInstance.DB)
-	_, authToken, todo := SetupPinTest(t)
+func TestAddChecklistToTodo(t *testing.T) {
+	tests := []struct {
+		description        string
+		setupFunc          func(t *testing.T) AddItemToTodoChecklistSetupResponse
+		expectedStatusCode int
+		expectedMsg        string
+		extraAssertions    func(t *testing.T, setupFuncResponse AddItemToTodoChecklistSetupResponse)
+	}{
+		{
+			description:        "checklist can be added to todo successfully",
+			setupFunc:          addItemToTodoChecklistSuccessfullySetup,
+			expectedStatusCode: http.StatusCreated,
+			expectedMsg:        "",
+			extraAssertions:    addItemToTodoChecklistSuccessfullyExtraAssertions,
+		},
+		{
+			description:        "checklist can only be added to Todos with type of checklist",
+			setupFunc:          preventChecklistAdditionSetup,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedMsg:        "only todos with type of checklists are supported",
+			extraAssertions:    preventChecklistAdditionExtraAssertions,
+		},
+		{
+			description:        "checklist returns validation error",
+			setupFunc:          addItemToTodoChecklistValidationErrorSetup,
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedMsg:        "",
+			extraAssertions:    addItemToTodoChecklistValidationErrorExtraAssertions,
+		},
+		{
+			description:        "checklist returns error on unknown Todo",
+			setupFunc:          addItemToTodoChecklistUnknownTodoSetup,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedMsg:        "",
+			extraAssertions:    addItemToTodoChecklistUnknownTodoExtraAssertions,
+		},
+		{
+			description:        "checklist returns error when TODO ID is another user's",
+			setupFunc:          addItemToTodoChecklistAnotherUserTodoSetup,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedMsg:        "",
+			extraAssertions:    addItemToTodoChecklistAnotherUserTodoExtraAssertions,
+		},
+	}
 
-	req, err := http.NewRequest(http.MethodPatch, TestServerInstance.Server.URL+"/todos/"+strconv.Itoa(int(todo.ID-1))+"/pin", bytes.NewBuffer(nil))
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.description, func(subTest *testing.T) {
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+authToken)
+			setup := tt.setupFunc(subTest)
 
-	//ACT
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+			jsonRequest, err := json.Marshal(map[string]string{
+				"item": setup.ChecklistItem,
+			})
+			if err != nil {
+				t.Fatal("Failed to marshal request")
+			}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
+			url := fmt.Sprintf("%s/todos/%d/checklist", TestServerInstance.Server.URL, setup.Todo.ID)
+			req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonRequest))
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
 
-	var responseJson utils.JsonResponse[interface{}]
-	err = json.Unmarshal(body, &responseJson)
-	require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+setup.AuthToken)
 
-	//ASSERT
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	assert.Equal(t, responseJson.Message, "todo does not exist")
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != tt.expectedStatusCode {
+				t.Errorf("expected status code %v, but got %v", tt.expectedStatusCode, resp.StatusCode)
+			}
+			if tt.expectedMsg != "" {
+				var jsonResponse utils.JsonResponse[interface{}]
+				err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
+				if err != nil {
+					t.Fatalf("failed to decode response: %v", err)
+				}
+
+				if jsonResponse.Message != tt.expectedMsg {
+					t.Errorf("expected message %s, but got %s", tt.expectedMsg, jsonResponse.Message)
+				}
+
+				tt.extraAssertions(subTest, setup)
+			}
+		})
+	}
 }
 
-func TestAddChecklist_UnauthorizedError(t *testing.T) {
-	//ARRANGE
-	ClearAllTables(t, TestServerInstance.DB)
-	_, _, todo := SetupPinTest(t)
+func addItemToTodoChecklistSuccessfullySetup(t *testing.T) AddItemToTodoChecklistSetupResponse {
+	t.Helper()
+	user, authToken, todo := SetupAddChecklistTest(t)
+	return AddItemToTodoChecklistSetupResponse{
+		AuthToken:     authToken,
+		User:          user,
+		Todo:          todo,
+		ChecklistItem: "Testing",
+	}
+}
 
-	req, err := http.NewRequest(http.MethodPatch, TestServerInstance.Server.URL+"/todos/"+strconv.Itoa(int(todo.ID-1))+"/pin", bytes.NewBuffer(nil))
-	require.NoError(t, err)
+func addItemToTodoChecklistSuccessfullyExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
+	t.Helper()
 
-	req.Header.Set("Content-Type", "application/json")
+	checklist := database.Checklist{}
+	result := TestServerInstance.DB.Where("").First(&checklist)
+	if result.Error != nil {
+		t.Errorf("failed to find checklist: %v", result.Error)
+	}
 
-	//ACT
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	if checklist.TodoID != setup.Todo.ID {
+		t.Errorf("expected todo id %v, but got %v", setup.Todo.ID, checklist.TodoID)
+	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
+	if checklist.Description != setup.ChecklistItem {
+		t.Errorf("expected checklist description %v, but got %v", setup.ChecklistItem, checklist.Description)
+	}
 
-	var responseJson utils.JsonResponse[interface{}]
-	err = json.Unmarshal(body, &responseJson)
-	require.NoError(t, err)
+	if checklist.Done {
+		t.Error("expected checklist not to be marked as done, but marked as done")
+	}
+}
 
-	//ASSERT
-	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.Equal(t, responseJson.Message, "Unauthenticated")
+func addItemToTodoChecklistValidationErrorSetup(t *testing.T) AddItemToTodoChecklistSetupResponse {
+	t.Helper()
+	user, authToken, todo := SetupAddChecklistTest(t)
+	return AddItemToTodoChecklistSetupResponse{
+		AuthToken:     authToken,
+		User:          user,
+		Todo:          todo,
+		ChecklistItem: "",
+	}
+}
+
+func addItemToTodoChecklistValidationErrorExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
+	t.Helper()
+	checklist := database.Checklist{}
+	result := TestServerInstance.DB.Where("").First(&checklist)
+	if result.Error == nil {
+		t.Errorf("failed to find checklist: %v", result.Error)
+	}
+}
+
+func addItemToTodoChecklistUnknownTodoSetup(t *testing.T) AddItemToTodoChecklistSetupResponse {
+	t.Helper()
+	user, authToken, todo := SetupAddChecklistTest(t)
+	todo.ID = todo.ID + 1
+	return AddItemToTodoChecklistSetupResponse{
+		AuthToken:     authToken,
+		User:          user,
+		Todo:          todo,
+		ChecklistItem: "Testing testing",
+	}
+}
+
+func addItemToTodoChecklistUnknownTodoExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
+	t.Helper()
+	checklist := database.Checklist{}
+	result := TestServerInstance.DB.Where("").First(&checklist)
+	if result.Error == nil {
+		t.Errorf("failed to find checklist: %v", result.Error)
+	}
+}
+
+func addItemToTodoChecklistAnotherUserTodoSetup(t *testing.T) AddItemToTodoChecklistSetupResponse {
+	t.Helper()
+	user, authToken, _ := SetupAddChecklistTest(t)
+	anotherUser := SeedUser(t, struct{}{})
+	anotherTodo := SeedTodo(t, struct{}{}, anotherUser.ID)
+	return AddItemToTodoChecklistSetupResponse{
+		AuthToken:     authToken,
+		User:          user,
+		Todo:          anotherTodo,
+		ChecklistItem: "Testing testing",
+	}
+}
+
+func addItemToTodoChecklistAnotherUserTodoExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
+	t.Helper()
+	checklist := database.Checklist{}
+	result := TestServerInstance.DB.Where("").First(&checklist)
+	if result.Error == nil {
+		t.Errorf("failed to find checklist: %v", result.Error)
+	}
+}
+
+func preventChecklistAdditionSetup(t *testing.T) AddItemToTodoChecklistSetupResponse {
+	t.Helper()
+	user, authToken, todo := SetupAddChecklistTest(t)
+	TestServerInstance.DB.Model(&todo).Where("id", todo.ID).Update("type", enums.Text)
+	return AddItemToTodoChecklistSetupResponse{
+		AuthToken:     authToken,
+		User:          user,
+		Todo:          todo,
+		ChecklistItem: "Testing testing",
+	}
+}
+
+func preventChecklistAdditionExtraAssertions(t *testing.T, setup AddItemToTodoChecklistSetupResponse) {
+	t.Helper()
+	checklist := database.Checklist{}
+	result := TestServerInstance.DB.Where("").First(&checklist)
+	if result.Error == nil {
+		t.Errorf("failed to find checklist: %v", result.Error)
+	}
 }

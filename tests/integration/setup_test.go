@@ -11,6 +11,7 @@ import (
 	"github.com/horlerdipo/todo-golang/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"io"
 	"log"
 	_ "modernc.org/sqlite"
 	"net/http/httptest"
@@ -30,6 +31,7 @@ var TestServerInstance *TestServer
 var DBName = "todo-golang-test.db"
 
 func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
 	env.LoadEnv(".env.testing")
 	TestServerInstance = setupGlobalServer()
 	code := m.Run()
@@ -212,6 +214,7 @@ func SeedUser[T any](t *testing.T, input T) *database.User {
 }
 
 func GenerateTestJwtToken(t *testing.T, userID uint) string {
+	t.Helper()
 	ttl := time.Now().Add(time.Hour * time.Duration(env.FetchInt("JWT_TTL")))
 	token, err := utils.GenerateJwtToken(env.FetchString("JWT_SECRET"), ttl, userID)
 	if err != nil {
