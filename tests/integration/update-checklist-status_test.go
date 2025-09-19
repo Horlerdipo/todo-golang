@@ -126,7 +126,7 @@ func markChecklistAsDoneSuccessfullyExtraAssertions(t *testing.T, setup *UpdateI
 	t.Helper()
 
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id = ?", setup.Checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}
@@ -158,7 +158,7 @@ func markChecklistAsNotDoneSuccessfullyExtraAssertions(t *testing.T, setup *Upda
 	t.Helper()
 
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id = ?", setup.Checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}

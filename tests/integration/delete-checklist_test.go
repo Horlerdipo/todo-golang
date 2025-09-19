@@ -119,7 +119,7 @@ func removeChecklistItemSuccessfullySetup(t *testing.T) DeleteItemFromChecklistS
 
 func removeChecklistItemSuccessfullyExtraAssertions(t *testing.T, setup DeleteItemFromChecklistSetupResponse) {
 	checklist := &database.Checklist{}
-	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id = ?", setup.Checklist.ID).First(&checklist)
 	if result.Error == nil {
 		t.Errorf("checklist item can't be removed")
 	}
@@ -149,7 +149,7 @@ func unknownTodoSetup(t *testing.T) DeleteItemFromChecklistSetupResponse {
 
 func unknownTodoExtraAssertions(t *testing.T, setup DeleteItemFromChecklistSetupResponse) {
 	checklist := &database.Checklist{}
-	result := TestServerInstance.DB.Where("id", setup.Checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id = ?", setup.Checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("expected error to be nil, but got %v", result.Error)
 	}

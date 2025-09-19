@@ -13,6 +13,7 @@ type TodoRepository interface {
 	CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error)
 	DeleteTodo(ctx context.Context, todoId uint) error
 	FindTodoByUserId(ctx context.Context, todoId uint, userId uint) (*Todo, error)
+	UpdateTodo(ctx context.Context, todoId uint, updateTodoDto *dtos.UpdateTodoDTO, deleteChecklist bool) error
 	PinTodo(ctx context.Context, todoId uint) error
 	UnPinTodo(ctx context.Context, todoId uint) error
 	CountPinnedTodos(ctx context.Context, userId uint) int64
@@ -90,10 +91,45 @@ func (repo todoRepository) FindTodoByUserId(ctx context.Context, todoId uint, us
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.New("todo not found")
 		}
-
 		return nil, result.Error
 	}
 	return &todo, nil
+}
+
+func (repo todoRepository) UpdateTodo(ctx context.Context, todoId uint, updateTodoDto *dtos.UpdateTodoDTO, deleteChecklist bool) error {
+
+	var todo Todo
+	result := repo.db.WithContext(ctx).Where("id = ?", todoId).First(&todo)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return errors.New("todo not found")
+		}
+		log.Println("UpdateTodo error:", result.Error)
+		return errors.New("unable to fetch todo while updating todo")
+	}
+
+	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&todo).Select("Content", "Title", "Type").Where("id = ?", todo.ID).Updates(Todo{
+			Content: updateTodoDto.Content,
+			Title:   updateTodoDto.Title,
+			Type:    updateTodoDto.Type,
+		})
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		if deleteChecklist {
+			tx.Model(&Checklist{}).Where("todo_id = ?", todoId).Delete(&Checklist{})
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("unable to update todo: %v", err)
+		return errors.New("unable to update todo")
+	}
+	return nil
 }
 
 func (repo todoRepository) PinTodo(ctx context.Context, todoId uint) error {

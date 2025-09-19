@@ -157,7 +157,7 @@ func updateItemOnTodoChecklistValidationErrorSetup(t *testing.T) UpdateItemOnTod
 func updateItemOnTodoChecklistValidationErrorExtraAssertions(t *testing.T, setup *UpdateItemOnTodoChecklistSetupResponse) {
 	t.Helper()
 	checklist := database.Checklist{}
-	result := TestServerInstance.DB.Where("id", checklist.ID).First(&checklist)
+	result := TestServerInstance.DB.Where("id = ?", checklist.ID).First(&checklist)
 	if result.Error != nil {
 		t.Errorf("failed to find checklist: %v", result.Error)
 	}

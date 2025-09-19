@@ -24,7 +24,7 @@ func NewService(todoRepository database.TodoRepository, blacklistRepository data
 }
 
 func (service *Service) CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error) {
-	if createTodoDto.Type == enums.Text {
+	if createTodoDto.Type == enums.Checklist {
 		createTodoDto.Content = nil
 	}
 
@@ -50,6 +50,28 @@ func (service *Service) DeleteTodo(ctx context.Context, todoId uint, userId uint
 		return errors.New("unable to delete todo, please try again")
 	}
 	return nil
+}
+
+func (service *Service) UpdateTodo(ctx context.Context, todoId uint, updateTodoDto *dtos.UpdateTodoDTO, userId uint) error {
+
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	if err != nil {
+		return errors.New("todo does not exist")
+	}
+
+	deleteChecklist := false
+	todo.Title = updateTodoDto.Title
+
+	//if type is changing from checklist to text, delete checklist
+	//and if type is changing from text to checklist, make content nil
+	if updateTodoDto.Type == enums.Text {
+		deleteChecklist = true
+	} else {
+		updateTodoDto.Content = nil
+	}
+
+	err = service.TodoRepository.UpdateTodo(ctx, todoId, updateTodoDto, deleteChecklist)
+	return err
 }
 
 func (service *Service) AddChecklistItem(ctx context.Context, todoId uint, description string, userId uint) error {

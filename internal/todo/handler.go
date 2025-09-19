@@ -56,6 +56,30 @@ func (handler *Handler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (handler *Handler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
+	todoId, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Todo not found", nil)
+		return
+	}
+
+	jsonRequest, err := utils.JsonValidate[dtos.UpdateTodoDTO](w, r)
+	if err != nil {
+		return
+	}
+
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+
+	err = handler.TodoService.UpdateTodo(r.Context(), uint(todoId), &jsonRequest, authDetails.UserId)
+	if err != nil {
+		utils.RespondWithError(w, 400, err.Error(), nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return
+}
+
 func (handler *Handler) PinTodo(w http.ResponseWriter, r *http.Request) {
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 	todoId, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
@@ -195,6 +219,7 @@ func (handler *Handler) RegisterRoutes(r chi.Router) {
 		r.Use(middlewares.JwtAuthMiddleware(handler.TodoService.TokenBlacklistRepository))
 		r.Post("/", handler.CreateTodo)
 		r.Delete("/{id}", handler.DeleteTodo)
+		r.Patch("/{id}", handler.UpdateTodo)
 		r.Patch("/{id}/pin", handler.PinTodo)
 		r.Patch("/{id}/unpin", handler.UnPinTodo)
 
@@ -205,6 +230,5 @@ func (handler *Handler) RegisterRoutes(r chi.Router) {
 			r.Put("/{id}/checklist/{itemId}", handler.UpdateChecklistItem)
 			r.Patch("/{id}/checklist/{itemId}", handler.UpdateChecklistItemStatus)
 		})
-
 	})
 }
