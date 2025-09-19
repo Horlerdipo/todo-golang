@@ -3,6 +3,7 @@ package database
 import (
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/utils"
+	"golang.org/x/net/context"
 	"gorm.io/gorm"
 )
 
@@ -13,28 +14,28 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 type UserRepository interface {
-	FindUserByID(id uint) (*User, error)
-	FindUserByEmail(email string) (*User, error)
-	CreateUser(userDto *dtos.CreateUserDTO) (uint, error)
-	UpdateUser(userId uint, userDto *dtos.UpdateUserDTO) error
-	FindUserByResetToken(token string) (*User, error)
-	UpdateUserPassword(userId uint, password string, resetTokens bool) error
+	FindUserByID(ctx context.Context, id uint) (*User, error)
+	FindUserByEmail(ctx context.Context, email string) (*User, error)
+	CreateUser(ctx context.Context, userDto *dtos.CreateUserDTO) (uint, error)
+	UpdateUser(ctx context.Context, userId uint, userDto *dtos.UpdateUserDTO) error
+	FindUserByResetToken(ctx context.Context, token string) (*User, error)
+	UpdateUserPassword(ctx context.Context, userId uint, password string, resetTokens bool) error
 }
 
 type userRepository struct {
 	db *gorm.DB
 }
 
-func (repo *userRepository) FindUserByEmail(email string) (*User, error) {
+func (repo *userRepository) FindUserByEmail(ctx context.Context, email string) (*User, error) {
 	userModel := User{}
-	result := repo.db.Where("email = ?", email).First(&userModel)
+	result := repo.db.WithContext(ctx).Where("email = ?", email).First(&userModel)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &userModel, nil
 }
 
-func (repo *userRepository) CreateUser(userDto *dtos.CreateUserDTO) (uint, error) {
+func (repo *userRepository) CreateUser(ctx context.Context, userDto *dtos.CreateUserDTO) (uint, error) {
 	hashedPassword, err := utils.HashPassword(userDto.Password)
 	if err != nil {
 		return 0, err
@@ -47,7 +48,7 @@ func (repo *userRepository) CreateUser(userDto *dtos.CreateUserDTO) (uint, error
 		Password:  hashedPassword,
 	}
 
-	result := repo.db.Create(&userModel)
+	result := repo.db.WithContext(ctx).Create(&userModel)
 
 	if result.Error != nil {
 		return 0, result.Error
@@ -55,8 +56,8 @@ func (repo *userRepository) CreateUser(userDto *dtos.CreateUserDTO) (uint, error
 	return userModel.ID, nil
 }
 
-func (repo *userRepository) UpdateUser(userId uint, userDto *dtos.UpdateUserDTO) error {
-	result := repo.db.Model(&User{}).Where("id = ?", userId).Updates(userDto)
+func (repo *userRepository) UpdateUser(ctx context.Context, userId uint, userDto *dtos.UpdateUserDTO) error {
+	result := repo.db.WithContext(ctx).Model(&User{}).Where("id = ?", userId).Updates(userDto)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -66,28 +67,28 @@ func (repo *userRepository) UpdateUser(userId uint, userDto *dtos.UpdateUserDTO)
 	return nil
 }
 
-func (repo *userRepository) FindUserByResetToken(resetToken string) (*User, error) {
+func (repo *userRepository) FindUserByResetToken(ctx context.Context, resetToken string) (*User, error) {
 	userModel := User{}
-	result := repo.db.Where("reset_token = ?", resetToken).First(&userModel)
+	result := repo.db.WithContext(ctx).Where("reset_token = ?", resetToken).First(&userModel)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &userModel, nil
 }
 
-func (repo *userRepository) UpdateUserPassword(userId uint, password string, resetTokens bool) error {
+func (repo *userRepository) UpdateUserPassword(ctx context.Context, userId uint, password string, resetTokens bool) error {
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		return err
 	}
 
 	if resetTokens {
-		result := repo.db.Model(&User{}).Where("id = ?", userId).Updates(map[string]interface{}{"password": hashedPassword, "reset_token": nil, "reset_token_expires_at": nil})
+		result := repo.db.WithContext(ctx).Model(&User{}).Where("id = ?", userId).Updates(map[string]interface{}{"password": hashedPassword, "reset_token": nil, "reset_token_expires_at": nil})
 		if result.Error != nil {
 			return result.Error
 		}
 	} else {
-		result := repo.db.Model(&User{}).Where("id = ?", userId).Update("password", hashedPassword)
+		result := repo.db.WithContext(ctx).Model(&User{}).Where("id = ?", userId).Update("password", hashedPassword)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -96,9 +97,9 @@ func (repo *userRepository) UpdateUserPassword(userId uint, password string, res
 	return nil
 }
 
-func (repo *userRepository) FindUserByID(id uint) (*User, error) {
+func (repo *userRepository) FindUserByID(ctx context.Context, id uint) (*User, error) {
 	userModel := User{}
-	result := repo.db.Where("id = ?", id).First(&userModel)
+	result := repo.db.WithContext(ctx).Where("id = ?", id).First(&userModel)
 	if result.Error != nil {
 		return nil, result.Error
 	}

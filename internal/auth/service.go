@@ -7,6 +7,7 @@ import (
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/pkg"
 	"github.com/horlerdipo/todo-golang/utils"
+	"golang.org/x/net/context"
 	"log"
 	"strconv"
 	"strings"
@@ -25,17 +26,17 @@ func NewService(userRepository database.UserRepository, tokenBlacklistRepository
 	}
 }
 
-func (service *Service) Register(userDto dtos.CreateUserDTO) (bool, error) {
+func (service *Service) Register(ctx context.Context, userDto dtos.CreateUserDTO) (bool, error) {
 	//check if user already exists
 	userDto.Email = strings.ToLower(userDto.Email)
 
-	_, err := service.UserRepository.FindUserByEmail(userDto.Email)
+	_, err := service.UserRepository.FindUserByEmail(ctx, userDto.Email)
 	if err == nil {
 		return false, errors.New("user already exists")
 	}
 
 	// create user
-	_, err = service.UserRepository.CreateUser(&userDto)
+	_, err = service.UserRepository.CreateUser(ctx, &userDto)
 	if err != nil {
 		log.Println("Error while creating user: " + err.Error())
 		return false, err
@@ -45,11 +46,11 @@ func (service *Service) Register(userDto dtos.CreateUserDTO) (bool, error) {
 	return true, nil
 }
 
-func (service *Service) Login(email string, password string) (dtos.LoginUserResponseDto, error) {
+func (service *Service) Login(ctx context.Context, email string, password string) (dtos.LoginUserResponseDto, error) {
 	email = strings.ToLower(email)
 
 	//check if email exists
-	user, err := service.UserRepository.FindUserByEmail(email)
+	user, err := service.UserRepository.FindUserByEmail(ctx, email)
 	if err != nil {
 		return dtos.LoginUserResponseDto{}, errors.New("email or password is not valid")
 	}
@@ -79,11 +80,11 @@ func (service *Service) Login(email string, password string) (dtos.LoginUserResp
 	}, nil
 }
 
-func (service *Service) SendForgotPasswordToken(email string) (bool, error) {
+func (service *Service) SendForgotPasswordToken(ctx context.Context, email string) (bool, error) {
 	//check if email exists
 	email = strings.ToLower(email)
 
-	user, err := service.UserRepository.FindUserByEmail(email)
+	user, err := service.UserRepository.FindUserByEmail(ctx, email)
 	if err != nil {
 		return false, errors.New("email does not exist")
 	}
@@ -96,7 +97,7 @@ func (service *Service) SendForgotPasswordToken(email string) (bool, error) {
 	}
 
 	resetTokenExpiresAt := time.Now().Add(time.Duration(env.FetchInt("PASSWORD_RESET_TOKEN_TTL")) * time.Minute)
-	err = service.UserRepository.UpdateUser(user.ID, &dtos.UpdateUserDTO{
+	err = service.UserRepository.UpdateUser(ctx, user.ID, &dtos.UpdateUserDTO{
 		ResetToken:          &resetToken,
 		ResetTokenExpiresAt: &resetTokenExpiresAt,
 	})
@@ -121,9 +122,9 @@ func (service *Service) SendForgotPasswordToken(email string) (bool, error) {
 	return true, nil
 }
 
-func (service *Service) ResetPassword(resetToken string, newPassword string) error {
+func (service *Service) ResetPassword(ctx context.Context, resetToken string, newPassword string) error {
 	//check if reset password token exists
-	user, err := service.UserRepository.FindUserByResetToken(resetToken)
+	user, err := service.UserRepository.FindUserByResetToken(ctx, resetToken)
 	if err != nil {
 		return errors.New("reset token is invalid")
 	}
@@ -137,7 +138,7 @@ func (service *Service) ResetPassword(resetToken string, newPassword string) err
 	}
 
 	//update the password
-	err = service.UserRepository.UpdateUserPassword(user.ID, newPassword, true)
+	err = service.UserRepository.UpdateUserPassword(ctx, user.ID, newPassword, true)
 	if err != nil {
 		log.Println("Error while updating user password: ", err)
 		return errors.New("error while resetting password")
@@ -145,8 +146,8 @@ func (service *Service) ResetPassword(resetToken string, newPassword string) err
 	return nil
 }
 
-func (service *Service) FetchUserDetails(userId uint) (*dtos.UserDetailsDto, error) {
-	user, err := service.UserRepository.FindUserByID(userId)
+func (service *Service) FetchUserDetails(ctx context.Context, userId uint) (*dtos.UserDetailsDto, error) {
+	user, err := service.UserRepository.FindUserByID(ctx, userId)
 	if err != nil {
 		log.Print("Error while fetching user details: ", err)
 		return nil, errors.New("error while fetching user details")
@@ -160,8 +161,8 @@ func (service *Service) FetchUserDetails(userId uint) (*dtos.UserDetailsDto, err
 	}, nil
 }
 
-func (service *Service) LogoutUser(authToken string, tokenExpirationDate time.Time) bool {
-	_, err := service.TokenBlacklistRepository.InsertToken(authToken, &tokenExpirationDate)
+func (service *Service) LogoutUser(ctx context.Context, authToken string, tokenExpirationDate time.Time) bool {
+	_, err := service.TokenBlacklistRepository.InsertToken(ctx, authToken, &tokenExpirationDate)
 	if err != nil {
 		return false
 	}

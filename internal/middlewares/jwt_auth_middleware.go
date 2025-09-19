@@ -55,7 +55,7 @@ func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepositor
 			}
 
 			//check if token is not blacklisted
-			isTokenBlackListed := tokenBlacklistRepository.CheckTokenExistence(tokenString)
+			isTokenBlackListed := tokenBlacklistRepository.CheckTokenExistence(r.Context(), tokenString)
 			if isTokenBlackListed {
 				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
 				return

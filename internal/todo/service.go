@@ -6,6 +6,7 @@ import (
 	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/enums"
+	"golang.org/x/net/context"
 	"log"
 	"strconv"
 )
@@ -22,12 +23,12 @@ func NewService(todoRepository database.TodoRepository, blacklistRepository data
 	}
 }
 
-func (service *Service) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, error) {
+func (service *Service) CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error) {
 	if createTodoDto.Type == enums.Text {
 		createTodoDto.Content = nil
 	}
 
-	todoId, err := service.TodoRepository.CreateTodo(createTodoDto)
+	todoId, err := service.TodoRepository.CreateTodo(ctx, createTodoDto)
 	if err != nil {
 		log.Println(err)
 		return 0, errors.New("unable to create todo, please try again")
@@ -35,15 +36,15 @@ func (service *Service) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, err
 	return todoId, nil
 }
 
-func (service *Service) DeleteTodo(todoId uint, userId uint) error {
+func (service *Service) DeleteTodo(ctx context.Context, todoId uint, userId uint) error {
 	//check if user and to-do exists
-	_, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
 	}
 
-	err = service.TodoRepository.DeleteTodo(todoId)
+	err = service.TodoRepository.DeleteTodo(ctx, todoId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("unable to delete todo, please try again")
@@ -51,8 +52,8 @@ func (service *Service) DeleteTodo(todoId uint, userId uint) error {
 	return nil
 }
 
-func (service *Service) AddChecklistItem(todoId uint, description string, userId uint) error {
-	todo, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+func (service *Service) AddChecklistItem(ctx context.Context, todoId uint, description string, userId uint) error {
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -62,12 +63,12 @@ func (service *Service) AddChecklistItem(todoId uint, description string, userId
 		return errors.New("only todos with type of checklists are supported")
 	}
 
-	_, err = service.TodoRepository.AddChecklistItem(todoId, description)
+	_, err = service.TodoRepository.AddChecklistItem(ctx, todoId, description)
 	return err
 }
 
-func (service *Service) DeleteChecklistItem(checklistId uint, todoId uint, userId uint) error {
-	todo, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+func (service *Service) DeleteChecklistItem(ctx context.Context, checklistId uint, todoId uint, userId uint) error {
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -77,11 +78,11 @@ func (service *Service) DeleteChecklistItem(checklistId uint, todoId uint, userI
 		return errors.New("only todos with type of checklists are supported")
 	}
 
-	return service.TodoRepository.DeleteChecklistItem(checklistId, todoId)
+	return service.TodoRepository.DeleteChecklistItem(ctx, checklistId, todoId)
 }
 
-func (service *Service) UpdateChecklistItem(checklistId uint, description string, todoId uint, userId uint) (uint, error) {
-	todo, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+func (service *Service) UpdateChecklistItem(ctx context.Context, checklistId uint, description string, todoId uint, userId uint) (uint, error) {
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return 0, errors.New("todo does not exist")
@@ -91,11 +92,11 @@ func (service *Service) UpdateChecklistItem(checklistId uint, description string
 		return 0, errors.New("only todos with type of checklists are supported")
 	}
 
-	return service.TodoRepository.UpdateChecklistItem(checklistId, todoId, description)
+	return service.TodoRepository.UpdateChecklistItem(ctx, checklistId, todoId, description)
 }
 
-func (service *Service) UpdateChecklistItemStatus(checklistId uint, done bool, todoId uint, userId uint) (uint, error) {
-	todo, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+func (service *Service) UpdateChecklistItemStatus(ctx context.Context, checklistId uint, done bool, todoId uint, userId uint) (uint, error) {
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return 0, errors.New("todo does not exist")
@@ -106,35 +107,35 @@ func (service *Service) UpdateChecklistItemStatus(checklistId uint, done bool, t
 		return 0, errors.New("only todos with type of checklists are supported")
 	}
 
-	return service.TodoRepository.UpdateChecklistItemStatus(checklistId, todoId, done)
+	return service.TodoRepository.UpdateChecklistItemStatus(ctx, checklistId, todoId, done)
 }
 
-func (service *Service) PinTodo(todoId uint, userId uint) error {
+func (service *Service) PinTodo(ctx context.Context, todoId uint, userId uint) error {
 	//check if the number of pinned is not more than 5
 	maxPinnedTodos := env.FetchInt("MAXIMUM_PINNED_TODOS", 1)
-	pinnedTodos := service.TodoRepository.CountPinnedTodos(userId)
+	pinnedTodos := service.TodoRepository.CountPinnedTodos(ctx, userId)
 	if int(pinnedTodos) >= maxPinnedTodos {
 		return errors.New("you can only pin " + strconv.Itoa(maxPinnedTodos) + " todos")
 	}
 
 	//check if to-do belongs to user
-	_, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
 	}
 
-	return service.TodoRepository.PinTodo(todoId)
+	return service.TodoRepository.PinTodo(ctx, todoId)
 }
 
-func (service *Service) UnPinTodo(todoId uint, userId uint) error {
+func (service *Service) UnPinTodo(ctx context.Context, todoId uint, userId uint) error {
 
 	//check if to-do belongs to user
-	_, err := service.TodoRepository.FindTodoByUserId(todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
 	}
 
-	return service.TodoRepository.UnPinTodo(todoId)
+	return service.TodoRepository.UnPinTodo(ctx, todoId)
 }

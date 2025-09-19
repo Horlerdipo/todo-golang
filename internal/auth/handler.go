@@ -27,7 +27,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.AuthService.Login(loginDto.Email, loginDto.Password)
+	response, err := h.AuthService.Login(r.Context(), loginDto.Email, loginDto.Password)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -46,7 +46,7 @@ func (h *Handler) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//send to auth service
-	_, err = h.AuthService.Register(createUserDto)
+	_, err = h.AuthService.Register(r.Context(), createUserDto)
 	if err != nil {
 		log.Println(fmt.Sprintf("Error while creating user: %v", err))
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
@@ -70,7 +70,7 @@ func (h *Handler) sendResetPasswordToken(w http.ResponseWriter, r *http.Request)
 	}
 
 	//call service
-	resp, errorRsp := h.AuthService.SendForgotPasswordToken(email.Email)
+	resp, errorRsp := h.AuthService.SendForgotPasswordToken(r.Context(), email.Email)
 	if errorRsp != nil && resp == false {
 		utils.RespondWithError(w, http.StatusBadRequest, errorRsp.Error(), nil)
 		return
@@ -93,7 +93,7 @@ func (h *Handler) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.AuthService.ResetPassword(resetPasswordStruct.ResetToken, resetPasswordStruct.NewPassword)
+	err = h.AuthService.ResetPassword(r.Context(), resetPasswordStruct.ResetToken, resetPasswordStruct.NewPassword)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -107,7 +107,7 @@ func (h *Handler) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 
-	user, err := h.AuthService.FetchUserDetails(authDetails.UserId)
+	user, err := h.AuthService.FetchUserDetails(r.Context(), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -119,7 +119,7 @@ func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
-	resp := h.AuthService.LogoutUser(authDetails.JwtToken, authDetails.JwtExpirationTime.Time)
+	resp := h.AuthService.LogoutUser(r.Context(), authDetails.JwtToken, authDetails.JwtExpirationTime.Time)
 	if !resp {
 		utils.RespondWithError(w, http.StatusInternalServerError, "unable to log out, please try again", nil)
 		return

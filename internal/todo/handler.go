@@ -28,7 +28,7 @@ func (handler *Handler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 	jsonResponse.UserID = authDetails.UserId
 
-	_, err = handler.TodoService.CreateTodo(&jsonResponse)
+	_, err = handler.TodoService.CreateTodo(r.Context(), &jsonResponse)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -47,7 +47,7 @@ func (handler *Handler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.TodoService.DeleteTodo(uint(todoIdInt), authDetails.UserId)
+	err = handler.TodoService.DeleteTodo(r.Context(), uint(todoIdInt), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -64,7 +64,7 @@ func (handler *Handler) PinTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.TodoService.PinTodo(uint(todoId), authDetails.UserId)
+	err = handler.TodoService.PinTodo(r.Context(), uint(todoId), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -80,7 +80,7 @@ func (handler *Handler) UnPinTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.TodoService.UnPinTodo(uint(todoId), authDetails.UserId)
+	err = handler.TodoService.UnPinTodo(r.Context(), uint(todoId), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -103,7 +103,7 @@ func (handler *Handler) AddChecklistItem(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = handler.TodoService.AddChecklistItem(uint(todoIdInt), checklistItem.Item, authDetails.UserId)
+	err = handler.TodoService.AddChecklistItem(r.Context(), uint(todoIdInt), checklistItem.Item, authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -126,7 +126,7 @@ func (handler *Handler) DeleteChecklistItem(w http.ResponseWriter, r *http.Reque
 
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 
-	err = handler.TodoService.DeleteChecklistItem(uint(checklistItem), uint(todoId), authDetails.UserId)
+	err = handler.TodoService.DeleteChecklistItem(r.Context(), uint(checklistItem), uint(todoId), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -154,7 +154,7 @@ func (handler *Handler) UpdateChecklistItem(w http.ResponseWriter, r *http.Reque
 	}
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 
-	_, err = handler.TodoService.UpdateChecklistItem(uint(checklistItem), jsonRequest.Item, uint(todoId), authDetails.UserId)
+	_, err = handler.TodoService.UpdateChecklistItem(r.Context(), uint(checklistItem), jsonRequest.Item, uint(todoId), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return
@@ -182,7 +182,7 @@ func (handler *Handler) UpdateChecklistItemStatus(w http.ResponseWriter, r *http
 	}
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
 
-	_, err = handler.TodoService.UpdateChecklistItemStatus(uint(checklistItem), jsonRequest.Done, uint(todoId), authDetails.UserId)
+	_, err = handler.TodoService.UpdateChecklistItemStatus(r.Context(), uint(checklistItem), jsonRequest.Done, uint(todoId), authDetails.UserId)
 	if err != nil {
 		utils.RespondWithError(w, 400, err.Error(), nil)
 		return

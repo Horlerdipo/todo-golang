@@ -4,22 +4,23 @@ import (
 	"errors"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/enums"
+	"golang.org/x/net/context"
 	"gorm.io/gorm"
 	"log"
 )
 
 type TodoRepository interface {
-	CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, error)
-	DeleteTodo(todoId uint) error
-	FindTodoByUserId(todoId uint, userId uint) (*Todo, error)
-	PinTodo(todoId uint) error
-	UnPinTodo(todoId uint) error
-	CountPinnedTodos(userId uint) int64
+	CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error)
+	DeleteTodo(ctx context.Context, todoId uint) error
+	FindTodoByUserId(ctx context.Context, todoId uint, userId uint) (*Todo, error)
+	PinTodo(ctx context.Context, todoId uint) error
+	UnPinTodo(ctx context.Context, todoId uint) error
+	CountPinnedTodos(ctx context.Context, userId uint) int64
 
-	AddChecklistItem(todoId uint, description string) (uint, error)
-	DeleteChecklistItem(checklistId uint, todoId uint) error
-	UpdateChecklistItem(checklistId uint, todoId uint, description string) (uint, error)
-	UpdateChecklistItemStatus(checklistId uint, todoId uint, done bool) (uint, error)
+	AddChecklistItem(ctx context.Context, todoId uint, description string) (uint, error)
+	DeleteChecklistItem(ctx context.Context, checklistId uint, todoId uint) error
+	UpdateChecklistItem(ctx context.Context, checklistId uint, todoId uint, description string) (uint, error)
+	UpdateChecklistItemStatus(ctx context.Context, checklistId uint, todoId uint, done bool) (uint, error)
 }
 
 type todoRepository struct {
@@ -30,7 +31,7 @@ func NewTodoRepository(db *gorm.DB) TodoRepository {
 	return todoRepository{db: db}
 }
 
-func (repo todoRepository) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, error) {
+func (repo todoRepository) CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error) {
 	todoModel := Todo{
 		Content: createTodoDto.Content,
 		Title:   createTodoDto.Title,
@@ -38,7 +39,7 @@ func (repo todoRepository) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, 
 		UserID:  createTodoDto.UserID,
 	}
 
-	err := repo.db.Transaction(func(tx *gorm.DB) error {
+	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.Create(&todoModel)
 		if result.Error != nil {
 			return result.Error
@@ -69,8 +70,8 @@ func (repo todoRepository) CreateTodo(createTodoDto *dtos.CreateTodoDTO) (uint, 
 	return todoModel.ID, nil
 }
 
-func (repo todoRepository) DeleteTodo(todoId uint) error {
-	err := repo.db.Transaction(func(tx *gorm.DB) error {
+func (repo todoRepository) DeleteTodo(ctx context.Context, todoId uint) error {
+	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		tx.Where("todo_id = ?", todoId).Delete(&Checklist{})
 		tx.Delete(&Todo{}, todoId)
 		return nil
@@ -82,9 +83,9 @@ func (repo todoRepository) DeleteTodo(todoId uint) error {
 	return nil
 }
 
-func (repo todoRepository) FindTodoByUserId(todoId uint, userId uint) (*Todo, error) {
+func (repo todoRepository) FindTodoByUserId(ctx context.Context, todoId uint, userId uint) (*Todo, error) {
 	todo := Todo{}
-	result := repo.db.Where("user_id = ?", userId).Where("id = ?", todoId).First(&todo)
+	result := repo.db.WithContext(ctx).Where("user_id = ?", userId).Where("id = ?", todoId).First(&todo)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.New("todo not found")
@@ -95,8 +96,8 @@ func (repo todoRepository) FindTodoByUserId(todoId uint, userId uint) (*Todo, er
 	return &todo, nil
 }
 
-func (repo todoRepository) PinTodo(todoId uint) error {
-	result := repo.db.Model(&Todo{}).Where("id = ?", todoId).Update("pinned", true)
+func (repo todoRepository) PinTodo(ctx context.Context, todoId uint) error {
+	result := repo.db.WithContext(ctx).Model(&Todo{}).Where("id = ?", todoId).Update("pinned", true)
 	if result.Error != nil {
 		log.Println(result.Error)
 		return errors.New("unable to pin todo, please try again")
@@ -104,8 +105,8 @@ func (repo todoRepository) PinTodo(todoId uint) error {
 	return nil
 }
 
-func (repo todoRepository) UnPinTodo(todoId uint) error {
-	result := repo.db.Model(&Todo{}).Where("id = ?", todoId).Update("pinned", false)
+func (repo todoRepository) UnPinTodo(ctx context.Context, todoId uint) error {
+	result := repo.db.WithContext(ctx).Model(&Todo{}).Where("id = ?", todoId).Update("pinned", false)
 	if result.Error != nil {
 		log.Println(result.Error)
 		return errors.New("unable to pin todo, please try again")
@@ -113,28 +114,28 @@ func (repo todoRepository) UnPinTodo(todoId uint) error {
 	return nil
 }
 
-func (repo todoRepository) CountPinnedTodos(userId uint) int64 {
+func (repo todoRepository) CountPinnedTodos(ctx context.Context, userId uint) int64 {
 	var count int64
-	repo.db.Model(&Todo{}).Where("user_id = ?", userId).Count(&count)
+	repo.db.WithContext(ctx).Model(&Todo{}).Where("user_id = ?", userId).Count(&count)
 	return count
 }
 
-func (repo todoRepository) AddChecklistItem(todoId uint, description string) (uint, error) {
+func (repo todoRepository) AddChecklistItem(ctx context.Context, todoId uint, description string) (uint, error) {
 	checklist := Checklist{
 		Description: description,
 		Done:        false,
 		TodoID:      todoId,
 	}
 
-	result := repo.db.Create(&checklist)
+	result := repo.db.WithContext(ctx).Create(&checklist)
 	if result.Error != nil {
 		return 0, result.Error
 	}
 	return checklist.ID, nil
 }
 
-func (repo todoRepository) DeleteChecklistItem(checklistId uint, todoId uint) error {
-	result := repo.db.Where("id = ?", checklistId).Where("todo_id = ?", todoId).Delete(&Checklist{})
+func (repo todoRepository) DeleteChecklistItem(ctx context.Context, checklistId uint, todoId uint) error {
+	result := repo.db.WithContext(ctx).Where("id = ?", checklistId).Where("todo_id = ?", todoId).Delete(&Checklist{})
 	if result.Error != nil {
 		log.Print("Error while deleting checklist", result.Error)
 		return errors.New("error while deleting checklist")
@@ -142,8 +143,8 @@ func (repo todoRepository) DeleteChecklistItem(checklistId uint, todoId uint) er
 	return nil
 }
 
-func (repo todoRepository) UpdateChecklistItem(checklistId uint, todoId uint, description string) (uint, error) {
-	result := repo.db.Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("description", description)
+func (repo todoRepository) UpdateChecklistItem(ctx context.Context, checklistId uint, todoId uint, description string) (uint, error) {
+	result := repo.db.WithContext(ctx).Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("description", description)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return 0, errors.New("checklist not found")
@@ -155,8 +156,8 @@ func (repo todoRepository) UpdateChecklistItem(checklistId uint, todoId uint, de
 	return checklistId, nil
 }
 
-func (repo todoRepository) UpdateChecklistItemStatus(checklistId uint, todoId uint, done bool) (uint, error) {
-	result := repo.db.Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("Done", done)
+func (repo todoRepository) UpdateChecklistItemStatus(ctx context.Context, checklistId uint, todoId uint, done bool) (uint, error) {
+	result := repo.db.WithContext(ctx).Model(&Checklist{}).Where("todo_id = ?", todoId).Where("id = ?", checklistId).Update("Done", done)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return 0, errors.New("checklist not found")
