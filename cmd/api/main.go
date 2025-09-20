@@ -48,6 +48,7 @@ func main() {
 
 	appContainer := app.NewAppContainer(db)
 	appContainer.RegisterRoutes(r)
+	appContainer.RegisterListeners()
 
 	port := env.FetchString("PORT", ":8000")
 	log.Println("🚀🚀🚀 Starting server on port " + port)

@@ -6,6 +6,8 @@ import (
 	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/enums"
+	"github.com/horlerdipo/todo-golang/internal/events"
+	"github.com/horlerdipo/todo-golang/pkg"
 	"golang.org/x/net/context"
 	"log"
 	"strconv"
@@ -14,12 +16,14 @@ import (
 type Service struct {
 	TodoRepository           database.TodoRepository
 	TokenBlacklistRepository database.TokenBlacklistRepository
+	EventBus                 pkg.EventBus
 }
 
-func NewService(todoRepository database.TodoRepository, blacklistRepository database.TokenBlacklistRepository) *Service {
+func NewService(todoRepository database.TodoRepository, blacklistRepository database.TokenBlacklistRepository, eventBus pkg.EventBus) *Service {
 	return &Service{
 		todoRepository,
 		blacklistRepository,
+		eventBus,
 	}
 }
 
@@ -33,6 +37,9 @@ func (service *Service) CreateTodo(ctx context.Context, createTodoDto *dtos.Crea
 		log.Println(err)
 		return 0, errors.New("unable to create todo, please try again")
 	}
+	service.EventBus.Publish(&events.TodoCreatedEvent{
+		TodoId: todoId,
+	})
 	return todoId, nil
 }
 
