@@ -225,7 +225,6 @@ func (repo todoRepository) FetchAll(ctx context.Context, paginationOptions dtos.
 		filter, err := paginationOptions.ConvertFilter(column)
 		if err != nil {
 			return response, err
-			//continue
 		}
 		baseQuery = baseQuery.Where(fmt.Sprintf("%s = ?", column), filter)
 	}

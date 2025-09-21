@@ -68,9 +68,9 @@ func (p *PaginationOptions) ValidateSortField() {
 }
 
 func (p *PaginationOptions) ValidateFilters() {
-	for _, filter := range p.Filters {
-		if _, ok := p.AllowedFilters[filter]; !ok {
-			delete(p.Filters, filter)
+	for key, _ := range p.Filters {
+		if _, ok := p.AllowedFilters[key]; !ok {
+			delete(p.Filters, key)
 		}
 	}
 }
@@ -93,7 +93,7 @@ func (p *PaginationOptions) ConvertFilter(column string) (interface{}, error) {
 
 	allowedFilter, ok := p.AllowedFilters[column]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("filter %s is not allowed", filter))
+		return nil, errors.New(fmt.Sprintf("filter %s is not allowed", column))
 	}
 
 	switch allowedFilter.Type {
