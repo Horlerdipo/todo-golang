@@ -7,6 +7,7 @@ import (
 	"github.com/horlerdipo/todo-golang/utils"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Handler struct {
@@ -214,6 +215,42 @@ func (handler *Handler) UpdateChecklistItemStatus(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (handler *Handler) FetchTodos(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	page, _ := strconv.Atoi(query.Get("page"))
+	perPage, _ := strconv.Atoi(query.Get("per_page"))
+	sortBy := query.Get("sort_by")
+	order := query.Get("order")
+
+	filters := make(map[string]string)
+	for key, values := range r.URL.Query() {
+		if strings.HasPrefix(key, "filters[") {
+			field := strings.TrimSuffix(strings.TrimPrefix(key, "filters["), "]")
+			filters[field] = values[0]
+		}
+	}
+
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+
+	paginationOptions := dtos.PaginationOptions{
+		Page:    page,
+		PerPage: perPage,
+		SortBy:  sortBy,
+		Order:   dtos.Order(order),
+		Filters: filters,
+	}
+
+	todos, err := handler.TodoService.FetchTodos(r.Context(), paginationOptions, authDetails.UserId)
+	if err != nil {
+		utils.RespondWithError(w, 400, err.Error(), nil)
+		return
+	}
+
+	utils.RespondWithPaginatedData(w, http.StatusOK, "Todos fetched successfully", todos.Data, todos.Meta)
+	return
+}
+
 func (handler *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/todos", func(r chi.Router) {
 		r.Use(middlewares.JwtAuthMiddleware(handler.TodoService.TokenBlacklistRepository))
@@ -222,6 +259,7 @@ func (handler *Handler) RegisterRoutes(r chi.Router) {
 		r.Patch("/{id}", handler.UpdateTodo)
 		r.Patch("/{id}/pin", handler.PinTodo)
 		r.Patch("/{id}/unpin", handler.UnPinTodo)
+		r.Get("/", handler.FetchTodos)
 
 		//Checklist
 		r.Group(func(r chi.Router) {

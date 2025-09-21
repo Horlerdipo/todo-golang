@@ -2,11 +2,13 @@ package database
 
 import (
 	"errors"
+	"fmt"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
 	"github.com/horlerdipo/todo-golang/internal/enums"
 	"golang.org/x/net/context"
 	"gorm.io/gorm"
 	"log"
+	"math"
 )
 
 type TodoRepository interface {
@@ -17,7 +19,7 @@ type TodoRepository interface {
 	PinTodo(ctx context.Context, todoId uint) error
 	UnPinTodo(ctx context.Context, todoId uint) error
 	CountPinnedTodos(ctx context.Context, userId uint) int64
-
+	FetchAll(ctx context.Context, paginationOptions dtos.PaginationOptions, userId uint) (dtos.PaginatedResponse[Todo], error)
 	AddChecklistItem(ctx context.Context, todoId uint, description string) (uint, error)
 	DeleteChecklistItem(ctx context.Context, checklistId uint, todoId uint) error
 	UpdateChecklistItem(ctx context.Context, checklistId uint, todoId uint, description string) (uint, error)
@@ -152,7 +154,11 @@ func (repo todoRepository) UnPinTodo(ctx context.Context, todoId uint) error {
 
 func (repo todoRepository) CountPinnedTodos(ctx context.Context, userId uint) int64 {
 	var count int64
-	repo.db.WithContext(ctx).Model(&Todo{}).Where("user_id = ?", userId).Count(&count)
+	repo.db.WithContext(ctx).
+		Model(&Todo{}).
+		Where("pinned = ?", true).
+		Where("user_id = ?", userId).
+		Count(&count)
 	return count
 }
 
@@ -203,4 +209,56 @@ func (repo todoRepository) UpdateChecklistItemStatus(ctx context.Context, checkl
 		return 0, errors.New("error while updating checklist status")
 	}
 	return checklistId, nil
+}
+
+func (repo todoRepository) FetchAll(ctx context.Context, paginationOptions dtos.PaginationOptions, userId uint) (dtos.PaginatedResponse[Todo], error) {
+	paginationOptions.Configure()
+	var todos []Todo
+	var total int64
+	var response dtos.PaginatedResponse[Todo]
+
+	baseQuery := repo.db.WithContext(ctx).
+		Model(&Todo{}).
+		Where("user_id = ?", userId)
+
+	for column, _ := range paginationOptions.Filters {
+		filter, err := paginationOptions.ConvertFilter(column)
+		if err != nil {
+			return response, err
+			//continue
+		}
+		baseQuery = baseQuery.Where(fmt.Sprintf("%s = ?", column), filter)
+	}
+
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return response, errors.New("error while counting todos")
+	}
+
+	result := baseQuery.
+		Debug().
+		Offset(paginationOptions.Offset()).
+		Limit(paginationOptions.PerPage).
+		Order(fmt.Sprintf("%v %v", paginationOptions.SortBy, paginationOptions.Order)).
+		Find(&todos)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return response, errors.New("todos not found")
+		}
+		err := errors.New("error while fetching all todos")
+		return response, err
+	}
+
+	response = dtos.PaginatedResponse[Todo]{
+		Data: todos,
+		Meta: dtos.PaginatedResponseMeta{
+			TotalCount:  int(total),
+			FirstPage:   1,
+			CurrentPage: paginationOptions.Page,
+			LastPage:    int(math.Ceil(float64(total) / float64(paginationOptions.PerPage))),
+			PerPage:     paginationOptions.PerPage,
+		},
+	}
+
+	return response, nil
 }

@@ -81,6 +81,31 @@ func (service *Service) UpdateTodo(ctx context.Context, todoId uint, updateTodoD
 	return err
 }
 
+func (service *Service) FetchTodos(ctx context.Context, pagination dtos.PaginationOptions, userId uint) (dtos.PaginatedResponse[database.Todo], error) {
+
+	pagination.AllowedSortFields = map[string]bool{
+		"id":         true,
+		"title":      true,
+		"created_at": true,
+		"updated_at": true,
+	}
+
+	pagination.AllowedFilters = map[string]dtos.AllowedFilter{
+		"title": {
+			Type: dtos.StringFilter,
+		},
+		"pinned": {
+			Type: dtos.BooleanFilter,
+		},
+	}
+
+	todos, err := service.TodoRepository.FetchAll(ctx, pagination, userId)
+	if err != nil {
+		return todos, err
+	}
+	return todos, nil
+}
+
 func (service *Service) AddChecklistItem(ctx context.Context, todoId uint, description string, userId uint) error {
 	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
 	if err != nil {

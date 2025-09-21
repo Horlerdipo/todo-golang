@@ -33,7 +33,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithSuccess(w, http.StatusOK, "login successful", response)
+	utils.RespondWithSuccess(w, http.StatusOK, "login successful", response, false)
 	return
 }
 
@@ -113,7 +113,7 @@ func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithSuccess(w, http.StatusOK, "profile fetched", user)
+	utils.RespondWithSuccess(w, http.StatusOK, "profile fetched", user, false)
 	return
 }
 

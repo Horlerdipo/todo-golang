@@ -18,6 +18,13 @@ type JsonResponse[T any] struct {
 	Data    T      `json:"data"`
 }
 
+type PaginatedJsonResponse[T any] struct {
+	Message string `json:"message"`
+	Status  bool   `json:"status"`
+	Data    T      `json:"data"`
+	Meta    any    `json:"meta"`
+}
+
 func RespondWithJson(w http.ResponseWriter, code int, content interface{}) {
 
 	w.Header().Add("Content-Type", "application/json")
@@ -60,7 +67,7 @@ func RespondWithError(w http.ResponseWriter, code int, message string, data inte
 	w.Write(marshalledData)
 }
 
-func RespondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}) {
+func RespondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}, isPaginatedResponse bool) {
 
 	w.Header().Add("Content-Type", "application/json")
 
@@ -68,18 +75,50 @@ func RespondWithSuccess(w http.ResponseWriter, code int, message string, data in
 		data = struct{}{}
 	}
 
+	var marshalledData []byte
+	var err error
+
 	content := JsonResponse[interface{}]{
-		message,
-		true,
-		data,
+		Message: message,
+		Status:  true,
+		Data:    data,
 	}
 
-	marshalledData, err := json.Marshal(content)
-
+	marshalledData, err = json.Marshal(content)
 	if err != nil {
-		log.Printf("Unable to marshal json %v", content)
-		w.Write([]byte(`{"message": "Internal Server Error", "success": false, "data": {}}`))
+		log.Printf("Unable to marshal JSON: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"message": "Internal Server Error", "success": false, "data": {}}`))
+		return
+	}
+
+	w.WriteHeader(code)
+	w.Write(marshalledData)
+}
+
+func RespondWithPaginatedData(w http.ResponseWriter, code int, message string, data interface{}, meta interface{}) {
+
+	w.Header().Add("Content-Type", "application/json")
+
+	if data == nil {
+		data = struct{}{}
+	}
+
+	var marshalledData []byte
+	var err error
+
+	content := PaginatedJsonResponse[interface{}]{
+		Message: message,
+		Status:  true,
+		Data:    data,
+		Meta:    meta,
+	}
+
+	marshalledData, err = json.Marshal(content)
+	if err != nil {
+		log.Printf("Unable to marshal JSON: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"message": "Internal Server Error", "success": false, "data": {}}`))
 		return
 	}
 

@@ -39,7 +39,7 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.SupressNotFound(r))
+	//r.Use(middleware.SupressNotFound(r))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)

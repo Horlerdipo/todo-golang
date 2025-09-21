@@ -6,10 +6,11 @@ import (
 
 type Todo struct {
 	Model
-	Title   string         `json:"title"`
-	Content *string        `json:"content"`
-	Type    enums.TodoType `json:"type"`
-	UserID  uint           `json:"user_id"`
-	User    User           `gorm:"constraint:OnDelete:CASCADE" json:"user"`
-	Pinned  bool           `gorm:"default:false" json:"pinned"`
+	Title      string         `json:"title"`
+	Content    *string        `json:"content"`
+	Type       enums.TodoType `json:"type"`
+	UserID     uint           `json:"user_id"`
+	User       User           `gorm:"constraint:OnDelete:CASCADE" json:"-"`
+	Pinned     bool           `gorm:"default:false" json:"pinned"`
+	Checklists []Checklist    `gorm:"foreignKey:TodoID" json:"checklists"`
 }
