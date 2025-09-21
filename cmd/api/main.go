@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/app"
 	"github.com/horlerdipo/todo-golang/internal/database"
@@ -38,13 +39,14 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	//r.Use(middleware.SupressNotFound)
+	r.Use(middleware.SupressNotFound(r))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.StripSlashes)
 	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(httprate.LimitByIP(60, time.Minute))
 
 	appContainer := app.NewAppContainer(db)
 	appContainer.RegisterRoutes(r)
