@@ -67,7 +67,7 @@ func RespondWithError(w http.ResponseWriter, code int, message string, data inte
 	w.Write(marshalledData)
 }
 
-func RespondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}, isPaginatedResponse bool) {
+func RespondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}) {
 
 	w.Header().Add("Content-Type", "application/json")
 

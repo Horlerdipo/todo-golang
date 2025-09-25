@@ -45,7 +45,7 @@ func (service *Service) CreateTodo(ctx context.Context, createTodoDto *dtos.Crea
 
 func (service *Service) DeleteTodo(ctx context.Context, todoId uint, userId uint) error {
 	//check if user and to-do exists
-	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -61,7 +61,7 @@ func (service *Service) DeleteTodo(ctx context.Context, todoId uint, userId uint
 
 func (service *Service) UpdateTodo(ctx context.Context, todoId uint, updateTodoDto *dtos.UpdateTodoDTO, userId uint) error {
 
-	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		return errors.New("todo does not exist")
 	}
@@ -106,8 +106,16 @@ func (service *Service) FetchTodos(ctx context.Context, pagination dtos.Paginati
 	return todos, nil
 }
 
+func (service *Service) FetchTodo(ctx context.Context, todoId uint, userId uint) (*database.Todo, error) {
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, true)
+	if err != nil {
+		return todo, err
+	}
+	return todo, err
+}
+
 func (service *Service) AddChecklistItem(ctx context.Context, todoId uint, description string, userId uint) error {
-	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -122,7 +130,7 @@ func (service *Service) AddChecklistItem(ctx context.Context, todoId uint, descr
 }
 
 func (service *Service) DeleteChecklistItem(ctx context.Context, checklistId uint, todoId uint, userId uint) error {
-	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -136,7 +144,7 @@ func (service *Service) DeleteChecklistItem(ctx context.Context, checklistId uin
 }
 
 func (service *Service) UpdateChecklistItem(ctx context.Context, checklistId uint, description string, todoId uint, userId uint) (uint, error) {
-	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return 0, errors.New("todo does not exist")
@@ -150,7 +158,7 @@ func (service *Service) UpdateChecklistItem(ctx context.Context, checklistId uin
 }
 
 func (service *Service) UpdateChecklistItemStatus(ctx context.Context, checklistId uint, done bool, todoId uint, userId uint) (uint, error) {
-	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	todo, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return 0, errors.New("todo does not exist")
@@ -173,7 +181,7 @@ func (service *Service) PinTodo(ctx context.Context, todoId uint, userId uint) e
 	}
 
 	//check if to-do belongs to user
-	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")
@@ -185,7 +193,7 @@ func (service *Service) PinTodo(ctx context.Context, todoId uint, userId uint) e
 func (service *Service) UnPinTodo(ctx context.Context, todoId uint, userId uint) error {
 
 	//check if to-do belongs to user
-	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId)
+	_, err := service.TodoRepository.FindTodoByUserId(ctx, todoId, userId, false)
 	if err != nil {
 		log.Println(err)
 		return errors.New("todo does not exist")

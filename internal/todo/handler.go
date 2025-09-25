@@ -251,6 +251,24 @@ func (handler *Handler) FetchTodos(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (handler *Handler) FetchTodo(w http.ResponseWriter, r *http.Request) {
+	todoId, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		utils.RespondWithError(w, 400, "todo not found", nil)
+		return
+	}
+	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
+
+	todo, err := handler.TodoService.FetchTodo(r.Context(), uint(todoId), authDetails.UserId)
+	if err != nil {
+		utils.RespondWithError(w, 400, err.Error(), nil)
+		return
+	}
+
+	utils.RespondWithSuccess(w, http.StatusOK, "Todo fetched successfully", todo)
+	return
+}
+
 func (handler *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/todos", func(r chi.Router) {
 		r.Use(middlewares.JwtAuthMiddleware(handler.TodoService.TokenBlacklistRepository))
@@ -260,6 +278,7 @@ func (handler *Handler) RegisterRoutes(r chi.Router) {
 		r.Patch("/{id}/pin", handler.PinTodo)
 		r.Patch("/{id}/unpin", handler.UnPinTodo)
 		r.Get("/", handler.FetchTodos)
+		r.Get("/{id}", handler.FetchTodo)
 
 		//Checklist
 		r.Group(func(r chi.Router) {

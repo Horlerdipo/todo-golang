@@ -14,7 +14,7 @@ import (
 type TodoRepository interface {
 	CreateTodo(ctx context.Context, createTodoDto *dtos.CreateTodoDTO) (uint, error)
 	DeleteTodo(ctx context.Context, todoId uint) error
-	FindTodoByUserId(ctx context.Context, todoId uint, userId uint) (*Todo, error)
+	FindTodoByUserId(ctx context.Context, todoId uint, userId uint, withChecklists bool) (*Todo, error)
 	UpdateTodo(ctx context.Context, todoId uint, updateTodoDto *dtos.UpdateTodoDTO, deleteChecklist bool) error
 	PinTodo(ctx context.Context, todoId uint) error
 	UnPinTodo(ctx context.Context, todoId uint) error
@@ -86,9 +86,17 @@ func (repo todoRepository) DeleteTodo(ctx context.Context, todoId uint) error {
 	return nil
 }
 
-func (repo todoRepository) FindTodoByUserId(ctx context.Context, todoId uint, userId uint) (*Todo, error) {
+func (repo todoRepository) FindTodoByUserId(ctx context.Context, todoId uint, userId uint, withChecklist bool) (*Todo, error) {
 	todo := Todo{}
-	result := repo.db.WithContext(ctx).Where("user_id = ?", userId).Where("id = ?", todoId).First(&todo)
+	query := repo.db.WithContext(ctx).
+		Where("user_id = ?", userId).
+		Where("id = ?", todoId)
+
+	if withChecklist {
+		query = query.Preload("Checklists")
+	}
+
+	result := query.First(&todo)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.New("todo not found")
