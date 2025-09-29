@@ -119,7 +119,7 @@ func (h *Handler) profileHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	authDetails := r.Context().Value(middlewares.UserKey).(middlewares.AuthDetails)
-	resp := h.AuthService.LogoutUser(r.Context(), authDetails.JwtToken, authDetails.JwtExpirationTime.Time)
+	resp := h.AuthService.LogoutUser(r.Context(), authDetails.UserId, authDetails.JwtToken, authDetails.JwtExpirationTime.Time)
 	if !resp {
 		utils.RespondWithError(w, http.StatusInternalServerError, "unable to log out, please try again", nil)
 		return

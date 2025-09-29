@@ -23,6 +23,7 @@ const UserKey contextKey = "user"
 func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			//log.Println("JwtAuthMiddleware hit:", r.URL.Path, r.Header.Get("Authorization"))
 			//check if auth header exists
 			header := r.Header.Get("Authorization")
 			if header == "" {

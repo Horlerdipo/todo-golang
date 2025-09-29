@@ -5,6 +5,7 @@ import (
 	"github.com/horlerdipo/todo-golang/env"
 	"github.com/horlerdipo/todo-golang/internal/database"
 	"github.com/horlerdipo/todo-golang/internal/dtos"
+	"github.com/horlerdipo/todo-golang/internal/sse"
 	"github.com/horlerdipo/todo-golang/pkg"
 	"github.com/horlerdipo/todo-golang/utils"
 	"golang.org/x/net/context"
@@ -17,12 +18,14 @@ import (
 type Service struct {
 	UserRepository           database.UserRepository
 	TokenBlacklistRepository database.TokenBlacklistRepository
+	SSEService               *sse.Service
 }
 
-func NewService(userRepository database.UserRepository, tokenBlacklistRepository database.TokenBlacklistRepository) *Service {
+func NewService(userRepository database.UserRepository, tokenBlacklistRepository database.TokenBlacklistRepository, sseService *sse.Service) *Service {
 	return &Service{
 		UserRepository:           userRepository,
 		TokenBlacklistRepository: tokenBlacklistRepository,
+		SSEService:               sseService,
 	}
 }
 
@@ -161,8 +164,9 @@ func (service *Service) FetchUserDetails(ctx context.Context, userId uint) (*dto
 	}, nil
 }
 
-func (service *Service) LogoutUser(ctx context.Context, authToken string, tokenExpirationDate time.Time) bool {
+func (service *Service) LogoutUser(ctx context.Context, userId uint, authToken string, tokenExpirationDate time.Time) bool {
 	_, err := service.TokenBlacklistRepository.InsertToken(ctx, authToken, &tokenExpirationDate)
+	service.SSEService.RemoveClients(userId)
 	if err != nil {
 		return false
 	}

@@ -39,6 +39,7 @@ func (service *Service) CreateTodo(ctx context.Context, createTodoDto *dtos.Crea
 	}
 	service.EventBus.Publish(&events.TodoCreatedEvent{
 		TodoId: todoId,
+		UserId: createTodoDto.UserID,
 	})
 	return todoId, nil
 }
