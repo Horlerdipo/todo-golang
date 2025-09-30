@@ -26,6 +26,12 @@ func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepositor
 			//log.Println("JwtAuthMiddleware hit:", r.URL.Path, r.Header.Get("Authorization"))
 			//check if auth header exists
 			header := r.Header.Get("Authorization")
+			isQueryBasedAuth := false
+			if header == "" {
+				header = r.URL.Query().Get("_token")
+				isQueryBasedAuth = true
+			}
+
 			if header == "" {
 				utils.RespondWithError(w, http.StatusUnauthorized, "Unauthenticated", struct{}{})
 				return
@@ -33,9 +39,14 @@ func JwtAuthMiddleware(tokenBlacklistRepository database.TokenBlacklistRepositor
 
 			//take code out of bearer string
 			tokenString := ""
-			tokens := strings.Split(header, " ")
-			if len(tokens) > 1 {
-				tokenString = tokens[1]
+			if !isQueryBasedAuth {
+				tokens := strings.Split(header, " ")
+				if len(tokens) > 1 {
+					tokenString = tokens[1]
+				}
+
+			} else {
+				tokenString = header
 			}
 
 			if tokenString == "" {

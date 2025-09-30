@@ -77,8 +77,13 @@ func (h *Handler) registerSSE(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case msg := <-client.Data:
-			fmt.Println("sending message on handler", msg)
-			marshalledMsg, err := json.Marshal(msg)
+			_, err = fmt.Fprintf(w, "event: %s\n", msg.Event)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			marshalledMsg, err := json.Marshal(msg.Data)
 			if err != nil {
 				fmt.Println(err)
 				return

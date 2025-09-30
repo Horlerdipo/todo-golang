@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --danger-gradient: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .gradient-bg {
+            background: var(--primary-gradient);
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .todo-item {
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .todo-item.pinned {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fff9c4 0%, #fff3cd 100%);
+        }
+
+        .todo-item.checklist-type {
+            border-left-color: #20c997;
+        }
+
+        .btn-gradient {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-success-gradient {
+            background: var(--success-gradient);
+            border: none;
+            color: white;
+        }
+
+        .btn-danger-gradient {
+            background: var(--danger-gradient);
+            border: none;
+            color: white;
+        }
+
+        .checklist-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid #20c997;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item.completed {
+            background: rgba(32, 201, 151, 0.1);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .auth-container {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 30px 30px;
+        }
+
+        .floating-add-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--success-gradient);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .floating-add-btn:hover {
+            transform: scale(1.1);
+            color: white;
+        }
+
+        .pagination .page-link {
+            border: none;
+            margin: 0 2px;
+            border-radius: 50px;
+            color: #667eea;
+        }
+
+        .pagination .page-link:hover {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark gradient-bg">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#"><i class="bi bi-check-circle"></i> TodoApp</a>
+        <div class="navbar-nav ms-auto" id="userNav" style="display: none;">
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                    <div class="profile-avatar me-2" id="userAvatar"></div>
+                    <span id="userName"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="showProfile()"><i class="bi bi-person"></i> Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <!-- Authentication Section -->
+    <div id="authSection" class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="auth-container p-4">
+                <div class="text-center mb-4">
+                    <h2 class="mb-3"><i class="bi bi-check-circle text-primary"></i> TodoApp</h2>
+                    <p class="text-muted">Organize your life, one task at a time</p>
+                </div>
+
+                <!-- Login Form -->
+                <div id="loginForm">
+                    <h4 class="mb-3">Sign In</h4>
+                    <form onsubmit="login(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-gradient w-100 mb-3">Sign In</button>
+                    </form>
+                    <div class="text-center">
+                        <button class="btn btn-link" onclick="showRegister()">Don't have an account? Sign Up</button>
+                        <button class="btn btn-link" onclick="showForgotPassword()">Forgot Password?</button>
+                    </div>
+                </div>
+
+                <!-- Register Form -->
+                <div id="registerForm" style="display: none;">
+                    <h4 class="mb-3">Sign Up</h4>
+                    <form onsubmit="register(event)">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="registerFirstName" required>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="registerLastName" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-success-gradient w-100 mb-3">Sign Up</button>
+                    </form>
+                    <div class="text-center">
+                        <button class="btn btn-link" onclick="showLogin()">Already have an account? Sign In</button>
+                    </div>
+                </div>
+
+                <!-- Forgot Password Form -->
+                <div id="forgotPasswordForm" style="display: none;">
+                    <h4 class="mb-3">Reset Password</h4>
+                    <form onsubmit="forgotPassword(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="forgotEmail" required>
+                        </div>
+                        <button type="submit" class="btn btn-gradient w-100 mb-3">Send Reset Code</button>
+                    </form>
+                    <div class="text-center">
+                        <button class="btn btn-link" onclick="showLogin()">Back to Sign In</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Todo Section -->
+    <div id="todoSection" style="display: none;" class="fade-in">
+        <!-- Header -->
+        <div class="page-header text-center">
+            <h1><i class="bi bi-list-check"></i> My Todos</h1>
+            <p class="lead">Stay organized and productive</p>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search todos..." id="searchInput">
+                    <button class="btn btn-gradient" onclick="searchTodos()"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="typeFilter" onchange="filterTodos()">
+                    <option value="">All Types</option>
+                    <option value="text">Text Only</option>
+                    <option value="checklist">Checklist Only</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Todo List -->
+        <div class="row">
+            <div class="col-12">
+                <div id="todoList" class="row g-3">
+                    <!-- Todos will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Todo pagination" class="mt-4">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- Pagination will be populated here -->
+            </ul>
+        </nav>
+
+        <!-- Floating Add Button -->
+        <button class="floating-add-btn" data-bs-toggle="modal" data-bs-target="#todoModal">
+            <i class="bi bi-plus"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Todo Modal -->
+<div class="modal fade" id="todoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header gradient-bg text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Todo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="todoForm">
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-control" id="todoTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="todoType" onchange="toggleContentType()">
+                            <option value="text">Text Todo</option>
+                            <option value="checklist">Checklist Todo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="contentSection">
+                        <label class="form-label">Content</label>
+                        <textarea class="form-control" id="todoContent" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3" id="checklistSection" style="display: none;">
+                        <label class="form-label">Checklist Items</label>
+                        <div id="checklistItems">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control checklist-input" placeholder="Enter checklist item">
+                                <button type="button" class="btn btn-success" onclick="addChecklistItem()">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-gradient" onclick="saveTodo()">
+                    <i class="bi bi-check"></i> Save Todo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Todo Details Modal -->
+<div class="modal fade" id="todoDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header gradient-bg text-white">
+                <h5 class="modal-title" id="detailsTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsBody">
+                <!-- Details will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-gradient" onclick="editCurrentTodo()">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Global variables
+    const BASE_URL = 'http://127.0.0.1:9100';
+    let currentUser = null;
+    let currentTodos = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    let editingTodo = null;
+    let selectedTodo = null;
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            setAuthToken(token);
+            loadUserProfile();
+            showTodoSection();
+            loadTodos();
+        }
+    });
+
+    // Auth functions
+    function showLogin() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('forgotPasswordForm').style.display = 'none';
+    }
+
+    function showRegister() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+        document.getElementById('forgotPasswordForm').style.display = 'none';
+    }
+
+    function showForgotPassword() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('forgotPasswordForm').style.display = 'block';
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            const response = await fetch(`${BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            if (data.status) {
+                const token = data.data.token.token;
+                localStorage.setItem('access_token', token);
+                setAuthToken(token);
+                currentUser = data.data;
+                showTodoSection();
+                loadTodos();
+                updateUserNav();
+                showAlert('Login successful!', 'success');
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        } catch (error) {
+            showAlert('Login failed. Please try again.', 'danger');
+        }
+    }
+
+    async function register(event) {
+        event.preventDefault();
+        const firstName = document.getElementById('registerFirstName').value;
+        const lastName = document.getElementById('registerLastName').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+
+        try {
+            const response = await fetch(`${BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    first_name: firstName,
+                    last_name: lastName,
+                    email,
+                    password
+                })
+            });
+
+            if (response.status === 204) {
+                showAlert('Registration successful! Please login.', 'success');
+                showLogin();
+            } else {
+                const data = await response.json();
+                showAlert(data.message, 'danger');
+            }
+        } catch (error) {
+            showAlert('Registration failed. Please try again.', 'danger');
+        }
+    }
+
+    async function forgotPassword(event) {
+        event.preventDefault();
+        const email = document.getElementById('forgotEmail').value;
+
+        try {
+            const response = await fetch(`${BASE_URL}/auth/password/forgot`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+            if (data.status) {
+                showAlert('Password reset instructions sent to your email!', 'success');
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to send reset email. Please try again.', 'danger');
+        }
+    }
+
+    async function logout() {
+        try {
+            await fetch(`${BASE_URL}/auth/logout`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+        } catch (error) {
+            console.log('Logout request failed, but proceeding with local logout');
+        }
+
+        localStorage.removeItem('access_token');
+        currentUser = null;
+        showAuthSection();
+    }
+
+    // UI functions
+    function showAuthSection() {
+        document.getElementById('authSection').style.display = 'block';
+        document.getElementById('todoSection').style.display = 'none';
+        document.getElementById('userNav').style.display = 'none';
+    }
+
+    function showTodoSection() {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('todoSection').style.display = 'block';
+        document.getElementById('userNav').style.display = 'block';
+    }
+
+    function updateUserNav() {
+        if (currentUser) {
+            const initials = (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+            document.getElementById('userAvatar').textContent = initials;
+            document.getElementById('userName').textContent = currentUser.first_name + ' ' + currentUser.last_name;
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+
+    // API functions
+    function getAuthHeaders() {
+        const token = localStorage.getItem('access_token');
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    function setAuthToken(token) {
+        localStorage.setItem('access_token', token);
+    }
+
+    async function loadUserProfile() {
+        try {
+            const response = await fetch(`${BASE_URL}/auth/user`, {
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentUser = data.data;
+                updateUserNav();
+            }
+        } catch (error) {
+            console.error('Failed to load user profile');
+        }
+    }
+
+    async function loadTodos(page = 1) {
+        try {
+            const response = await fetch(`${BASE_URL}/todos?per_page=6&page=${page}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentTodos = data.data;
+                currentPage = data.meta.current_page;
+                totalPages = data.meta.last_page;
+                renderTodos();
+                renderPagination();
+            }
+        } catch (error) {
+            showAlert('Failed to load todos', 'danger');
+        }
+    }
+
+    function renderTodos() {
+        const todoList = document.getElementById('todoList');
+        todoList.innerHTML = '';
+
+        if (currentTodos.length === 0) {
+            todoList.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-clipboard-x display-1 text-muted"></i>
+                        <h3 class="text-muted">No todos yet</h3>
+                        <p class="text-muted">Click the + button to add your first todo!</p>
+                    </div>
+                `;
+            return;
+        }
+
+        currentTodos.forEach(todo => {
+            const todoCard = createTodoCard(todo);
+            todoList.appendChild(todoCard);
+        });
+    }
+
+    function createTodoCard(todo) {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4';
+
+        const isPinned = todo.pinned ? 'pinned' : '';
+        const typeClass = todo.type === 'checklist' ? 'checklist-type' : '';
+
+        col.innerHTML = `
+                <div class="card card-hover todo-item ${isPinned} ${typeClass}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="bi ${todo.type === 'checklist' ? 'bi-list-check' : 'bi-file-text'} me-2"></i>
+                            <span class="badge bg-secondary me-2">${todo.type}</span>
+                            ${todo.pinned ? '<i class="bi bi-pin-fill text-warning" title="Pinned"></i>' : ''}
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="viewTodo(${todo.id})">
+                                    <i class="bi bi-eye"></i> View
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="editTodo(${todo.id})">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="togglePin(${todo.id}, ${!todo.pinned})">
+                                    <i class="bi ${todo.pinned ? 'bi-pin' : 'bi-pin-fill'}"></i> ${todo.pinned ? 'Unpin' : 'Pin'}
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTodo(${todo.id})">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">${todo.title}</h5>
+                        <p class="card-text text-muted">${todo.content || ''}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> ${new Date(todo.created_at).toLocaleDateString()}
+                        </small>
+                    </div>
+                </div>
+            `;
+
+        return col;
+    }
+
+    function renderPagination() {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadTodos(${currentPage - 1})">Previous</a>`;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" onclick="loadTodos(${i})">${i}</a>`;
+            pagination.appendChild(li);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadTodos(${currentPage + 1})">Next</a>`;
+        pagination.appendChild(nextLi);
+    }
+
+    // Todo management functions
+    function toggleContentType() {
+        const type = document.getElementById('todoType').value;
+        const contentSection = document.getElementById('contentSection');
+        const checklistSection = document.getElementById('checklistSection');
+
+        if (type === 'checklist') {
+            contentSection.style.display = 'block';
+            checklistSection.style.display = 'block';
+        } else {
+            contentSection.style.display = 'block';
+            checklistSection.style.display = 'none';
+        }
+    }
+
+    function addChecklistItem() {
+        const checklistItems = document.getElementById('checklistItems');
+        const newItem = document.createElement('div');
+        newItem.className = 'input-group mb-2';
+        newItem.innerHTML = `
+                <input type="text" class="form-control checklist-input" placeholder="Enter checklist item">
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+        checklistItems.appendChild(newItem);
+    }
+
+    async function saveTodo() {
+        const title = document.getElementById('todoTitle').value;
+        const type = document.getElementById('todoType').value;
+        const content = document.getElementById('todoContent').value;
+
+        if (!title.trim()) {
+            showAlert('Title is required', 'danger');
+            return;
+        }
+
+        const todoData = {
+            title: title.trim(),
+            type,
+            content: content.trim()
+        };
+
+        if (type === 'checklist') {
+            const checklistInputs = document.querySelectorAll('.checklist-input');
+            const checklist = [];
+            checklistInputs.forEach(input => {
+                if (input.value.trim()) {
+                    checklist.push(input.value.trim());
+                }
+            });
+            todoData.checklist = checklist;
+        }
+
+        try {
+            let response;
+            if (editingTodo) {
+                // Update existing todo
+                response = await fetch(`${BASE_URL}/todos/${editingTodo.id}`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        title: todoData.title,
+                        Type: todoData.type,
+                        Content: todoData.content
+                    })
+                });
+            } else {
+                // Create new todo
+                response = await fetch(`${BASE_URL}/todos`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(todoData)
+                });
+            }
+
+            if (response.ok) {
+                showAlert(editingTodo ? 'Todo updated successfully!' : 'Todo created successfully!', 'success');
+                resetTodoForm();
+                bootstrap.Modal.getInstance(document.getElementById('todoModal')).hide();
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to save todo', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to save todo', 'danger');
+        }
+    }
+
+    function resetTodoForm() {
+        document.getElementById('todoForm').reset();
+        document.getElementById('checklistItems').innerHTML = `
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control checklist-input" placeholder="Enter checklist item">
+                    <button type="button" class="btn btn-success" onclick="addChecklistItem()">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+            `;
+        editingTodo = null;
+        document.getElementById('modalTitle').textContent = 'Add New Todo';
+        toggleContentType();
+    }
+
+    async function viewTodo(id) {
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${id}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                selectedTodo = data.data;
+                showTodoDetails(selectedTodo);
+            } else {
+                showAlert('Failed to load todo details', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to load todo details', 'danger');
+        }
+    }
+
+    function showTodoDetails(todo) {
+        document.getElementById('detailsTitle').textContent = todo.title;
+        const detailsBody = document.getElementById('detailsBody');
+
+        let contentHtml = `
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary me-2">${todo.type}</span>
+                        ${todo.pinned ? '<span class="badge bg-warning"><i class="bi bi-pin-fill"></i> Pinned</span>' : ''}
+                    </div>
+                </div>
+            `;
+
+        if (todo.content) {
+            contentHtml += `
+                    <div class="mb-3">
+                        <h6><i class="bi bi-file-text"></i> Content</h6>
+                        <p class="bg-light p-3 rounded">${todo.content}</p>
+                    </div>
+                `;
+        }
+
+        if (todo.type === 'checklist' && todo.checklists && todo.checklists.length > 0) {
+            contentHtml += `
+                    <div class="mb-3">
+                        <h6><i class="bi bi-list-check"></i> Checklist Items</h6>
+                        <div class="checklist-container">
+                `;
+
+            todo.checklists.forEach(item => {
+                contentHtml += `
+                        <div class="checklist-item ${item.done ? 'completed' : ''}">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <input type="checkbox" class="form-check-input me-2" ${item.done ? 'checked' : ''}
+                                           onchange="toggleChecklistItem(${item.id}, this.checked)">
+                                    <span>${item.description}</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editChecklistItem(${item.id}, '${item.description}')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteChecklistItem(${todo.id}, ${item.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            });
+
+            contentHtml += `
+                        </div>
+                        <div class="mt-3">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="newChecklistItem" placeholder="Add new item...">
+                                <button class="btn btn-success" onclick="addNewChecklistItem(${todo.id})">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }
+
+        contentHtml += `
+                <div class="row text-muted">
+                    <div class="col-6">
+                        <small><i class="bi bi-calendar-plus"></i> Created: ${new Date(todo.created_at).toLocaleString()}</small>
+                    </div>
+                    <div class="col-6">
+                        <small><i class="bi bi-calendar-check"></i> Updated: ${new Date(todo.updated_at).toLocaleString()}</small>
+                    </div>
+                </div>
+            `;
+
+        detailsBody.innerHTML = contentHtml;
+        new bootstrap.Modal(document.getElementById('todoDetailsModal')).show();
+    }
+
+    function editCurrentTodo() {
+        if (selectedTodo) {
+            editTodo(selectedTodo.id);
+            bootstrap.Modal.getInstance(document.getElementById('todoDetailsModal')).hide();
+        }
+    }
+
+    async function editTodo(id) {
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${id}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                editingTodo = data.data;
+
+                document.getElementById('todoTitle').value = editingTodo.title;
+                document.getElementById('todoType').value = editingTodo.type;
+                document.getElementById('todoContent').value = editingTodo.content || '';
+                document.getElementById('modalTitle').textContent = 'Edit Todo';
+
+                toggleContentType();
+                new bootstrap.Modal(document.getElementById('todoModal')).show();
+            } else {
+                showAlert('Failed to load todo for editing', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to load todo for editing', 'danger');
+        }
+    }
+
+    async function deleteTodo(id) {
+        if (!confirm('Are you sure you want to delete this todo?')) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                showAlert('Todo deleted successfully!', 'success');
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to delete todo', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to delete todo', 'danger');
+        }
+    }
+
+    async function togglePin(id, shouldPin) {
+        try {
+            const endpoint = shouldPin ? 'pin' : 'unpin';
+            const response = await fetch(`${BASE_URL}/todos/${id}/${endpoint}`, {
+                method: 'PATCH',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                showAlert(`Todo ${shouldPin ? 'pinned' : 'unpinned'} successfully!`, 'success');
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to update pin status', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to update pin status', 'danger');
+        }
+    }
+
+    // Checklist item functions
+    async function toggleChecklistItem(itemId, done) {
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${selectedTodo.id}/checklist/${itemId}`, {
+                method: 'PATCH',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                // Refresh the todo details
+                viewTodo(selectedTodo.id);
+                loadTodos(currentPage);
+            } else {
+                showAlert('Failed to update checklist item', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to update checklist item', 'danger');
+        }
+    }
+
+    async function addNewChecklistItem(todoId) {
+        const input = document.getElementById('newChecklistItem');
+        const item = input.value.trim();
+
+        if (!item) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${todoId}/checklist`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ item })
+            });
+
+            if (response.ok) {
+                input.value = '';
+                viewTodo(todoId);
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to add checklist item', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to add checklist item', 'danger');
+        }
+    }
+
+    async function editChecklistItem(itemId, currentDescription) {
+        const newDescription = prompt('Edit item:', currentDescription);
+        if (!newDescription || newDescription === currentDescription) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${selectedTodo.id}/checklist/${itemId}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ item: newDescription })
+            });
+
+            if (response.ok) {
+                viewTodo(selectedTodo.id);
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to update checklist item', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to update checklist item', 'danger');
+        }
+    }
+
+    async function deleteChecklistItem(todoId, itemId) {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}/todos/${todoId}/checklist/${itemId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                viewTodo(todoId);
+                loadTodos(currentPage);
+            } else {
+                const data = await response.json();
+                showAlert(data.message || 'Failed to delete checklist item', 'danger');
+            }
+        } catch (error) {
+            showAlert('Failed to delete checklist item', 'danger');
+        }
+    }
+
+    // Search and filter functions
+    function searchTodos() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const typeFilter = document.getElementById('typeFilter').value;
+
+        // Simple client-side filtering for demo purposes
+        // In a real app, you'd want server-side search
+        const filteredTodos = currentTodos.filter(todo => {
+            const matchesSearch = todo.title.toLowerCase().includes(searchTerm) ||
+                (todo.content && todo.content.toLowerCase().includes(searchTerm));
+            const matchesType = !typeFilter || todo.type === typeFilter;
+            return matchesSearch && matchesType;
+        });
+
+        renderFilteredTodos(filteredTodos);
+    }
+
+    function filterTodos() {
+        searchTodos(); // Reuse search function which includes type filtering
+    }
+
+    function renderFilteredTodos(todos) {
+        const todoList = document.getElementById('todoList');
+        todoList.innerHTML = '';
+
+        if (todos.length === 0) {
+            todoList.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-search display-1 text-muted"></i>
+                        <h3 class="text-muted">No todos found</h3>
+                        <p class="text-muted">Try adjusting your search or filter criteria.</p>
+                    </div>
+                `;
+            return;
+        }
+
+        todos.forEach(todo => {
+            const todoCard = createTodoCard(todo);
+            todoList.appendChild(todoCard);
+        });
+    }
+
+    function showProfile() {
+        if (currentUser) {
+            alert(`Profile:\nName: ${currentUser.first_name} ${currentUser.last_name}\nEmail: ${currentUser.email}`);
+        }
+    }
+
+    // Event listeners
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Clear search on escape
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = '';
+            renderTodos();
+        }
+    });
+
+    // Reset form when modal is hidden
+    document.getElementById('todoModal').addEventListener('hidden.bs.modal', function() {
+        resetTodoForm();
+    });
+
+    // Enable enter key to search
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchTodos();
+        }
+    });
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import (
 	"github.com/horlerdipo/todo-golang/internal/todo"
 	"github.com/horlerdipo/todo-golang/pkg"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 type Container struct {
@@ -30,6 +31,9 @@ func NewAppContainer(db *gorm.DB) *Container {
 }
 
 func (container *Container) RegisterRoutes(r *chi.Mux) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./static/index.html")
+	})
 	container.AuthContainer.RegisterRoutes(r)
 	container.TodoContainer.RegisterRoutes(r)
 	container.SSEContainer.RegisterRoutes(r)
