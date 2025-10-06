@@ -73,6 +73,8 @@ I implemented this as a lightweight alternative to Websockets.
 
 - Implement Waterfall for proper event driven architecture and persistence
 
+- Update ```golangci-lint.yml```
+
 ## Testing
 
 Run all test 
