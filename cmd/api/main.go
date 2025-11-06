@@ -56,7 +56,10 @@ func main() {
 	r.Use(middleware.StripSlashes)
 	r.Use(middleware.Heartbeat("/ping"))
 	//r.Use(middleware.Timeout(60 * time.Second))
-	r.Use(httprate.LimitByIP(60, time.Minute))
+	rateLimitMins := env.FetchInt("HTTP_RATE_LIMIT_MINUTES", 60)
+	if rateLimitMins > 0 {
+		r.Use(httprate.LimitByIP(rateLimitMins, time.Minute))
+	}
 
 	appContainer := app.NewAppContainer(db)
 	appContainer.RegisterRoutes(r)
