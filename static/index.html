@@ -660,6 +660,9 @@
 
         <!-- Pagination -->
         <div class="pagination-keep" id="paginationContainer"></div>
+
+        <!-- Hidden counter to help Playwright detect DOM updates -->
+        <div id="todoUpdateCounter" style="display: none;">0</div>
     </div>
 </div>
 
@@ -982,6 +985,7 @@
                         <h3>Notes you add appear here</h3>
                     </div>
                 `;
+            markTodosUpdated();
             return;
         }
 
@@ -1012,6 +1016,14 @@
         }
 
         todosList.innerHTML = html;
+        markTodosUpdated();
+    }
+
+    function markTodosUpdated() {
+        const counter = document.getElementById('todoUpdateCounter');
+        if (counter) {
+            counter.textContent = String(Number(counter.textContent || '0') + 1);
+        }
     }
 
     function createTodoCard(todo) {
@@ -1039,22 +1051,22 @@
         }
 
         return `
-                <div class="todo-card ${todo.pinned ? 'pinned' : ''}" onclick="viewTodo(${todo.id})">
+                <div class="todo-card ${todo.pinned ? 'pinned' : ''}" data-testid="todo-card-${todo.id}" onclick="viewTodo(${todo.id})">
                     <div class="todo-card-header">
-                        <div class="todo-card-title">${todo.title}</div>
-                        <i class="bi ${todo.pinned ? 'bi-pin-fill' : 'bi-pin'} todo-card-pin"
+                        <div class="todo-card-title" data-testid="todo-title-${todo.id}">${todo.title}</div>
+                        <i class="bi ${todo.pinned ? 'bi-pin-fill' : 'bi-pin'} todo-card-pin" data-testid="${todo.pinned ? 'unpin-todo' : 'pin-todo'}-${todo.id}"
                            onclick="event.stopPropagation(); togglePin(${todo.id}, ${!todo.pinned})"></i>
                     </div>
-                    ${todo.content ? `<div class="todo-card-content">${todo.content}</div>` : ''}
+                    ${todo.content ? `<div class="todo-card-content" data-testid="todo-content-${todo.id}">${todo.content}</div>` : ''}
                     ${checklistHtml}
                     <div class="todo-card-meta">
                         ${typeBadge}
                     </div>
                     <div class="todo-card-actions">
-                        <button class="icon-btn" onclick="event.stopPropagation(); editTodo(${todo.id})" title="Edit">
+                        <button class="icon-btn" data-testid="edit-todo-${todo.id}" onclick="event.stopPropagation(); editTodo(${todo.id})" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="icon-btn" onclick="event.stopPropagation(); deleteTodo(${todo.id})" title="Delete">
+                        <button class="icon-btn" data-testid="delete-todo-${todo.id}" onclick="event.stopPropagation(); deleteTodo(${todo.id})" title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -1249,12 +1261,12 @@
         modalContent.innerHTML = `
                 <div style="padding: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                        <h4 style="font-size: 22px; font-weight: 400; margin: 0;">${todo.title}</h4>
+                        <h4 data-testid="todo-title" style="font-size: 22px; font-weight: 400; margin: 0;">${todo.title}</h4>
                         <button class="icon-btn" onclick="closeModal()">
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    ${todo.content ? `<p style="color: #5f6368; margin-bottom: 16px;">${todo.content}</p>` : ''}
+                    ${todo.content ? `<p data-testid="todo-content" style="color: #5f6368; margin-bottom: 16px;">${todo.content}</p>` : ''}
                     ${checklistHtml}
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
                         <div style="display: flex; gap: 8px;">
@@ -1262,7 +1274,7 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="icon-btn" onclick="togglePin(${todo.id}, ${!todo.pinned}); closeModal();" title="${todo.pinned ? 'Unpin' : 'Pin'}">
-                                <i class="bi ${todo.pinned ? 'bi-pin' : 'bi-pin-fill'}"></i>
+                                <i class="bi ${todo.pinned ? 'bi-pin-fill' : 'bi-pin'}"></i>
                             </button>
                             <button class="icon-btn" onclick="deleteTodo(${todo.id}); closeModal();" title="Delete">
                                 <i class="bi bi-trash"></i>
